@@ -31,6 +31,7 @@
 #ifndef TEXTURE_PROGRESS_BAR_H
 #define TEXTURE_PROGRESS_BAR_H
 
+#include "scene/2d/marker_2d.h"
 #include "scene/gui/range.h"
 
 class TextureProgressBar : public Range {
@@ -113,6 +114,8 @@ private:
 	Color tint_under = Color(1, 1, 1);
 	Color tint_progress = Color(1, 1, 1);
 	Color tint_over = Color(1, 1, 1);
+
+	Marker2D *crosshair_marker = nullptr;
 
 	void _set_texture(Ref<Texture2D> *p_destination, const Ref<Texture2D> &p_texture);
 	void _texture_changed();

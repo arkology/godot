@@ -535,7 +535,7 @@ void TextureProgressBar::_notification(int p_what) {
 								}
 							}
 
-							// Draw a reference cross.
+							// Change position of the reference cross node.
 							if (Engine::get_singleton()->is_editor_hint()) {
 								Point2 p;
 
@@ -548,8 +548,8 @@ void TextureProgressBar::_notification(int p_what) {
 								p *= get_relative_center();
 								p += progress_offset;
 								p = p.floor();
-								draw_line(p - Point2(8, 0), p + Point2(8, 0), Color(0.9, 0.5, 0.5), 2);
-								draw_line(p - Point2(0, 8), p + Point2(0, 8), Color(0.9, 0.5, 0.5), 2);
+
+								crosshair_marker->set_position(p);
 							}
 						} break;
 						case FILL_BILINEAR_LEFT_AND_RIGHT: {
@@ -599,6 +599,14 @@ void TextureProgressBar::set_fill_mode(int p_fill) {
 	}
 
 	mode = (FillMode)p_fill;
+
+	// Change the reference cross visibility depending on fill mode.
+	if (Engine::get_singleton()->is_editor_hint() && ((mode == FILL_CLOCKWISE) || (mode == FILL_COUNTER_CLOCKWISE) || (mode == FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE))) {
+		crosshair_marker->set_visible(true);
+	} else {
+		crosshair_marker->set_visible(false);
+	}
+
 	queue_redraw();
 	notify_property_list_changed();
 }
@@ -743,4 +751,9 @@ void TextureProgressBar::_bind_methods() {
 
 TextureProgressBar::TextureProgressBar() {
 	set_mouse_filter(MOUSE_FILTER_PASS);
+	if (Engine::get_singleton()->is_editor_hint()) {
+		crosshair_marker = memnew(Marker2D);
+		crosshair_marker->set_visible(false);
+	}
+	add_child(crosshair_marker, false, INTERNAL_MODE_FRONT);
 }
