@@ -754,14 +754,15 @@ void CPUParticles2D::_particles_process(double p_delta) {
 			real_t base_angle = tex_angle * Math::lerp(parameters_min[PARAM_ANGLE], parameters_max[PARAM_ANGLE], p.angle_rand);
 			p.rotation = Math::deg_to_rad(base_angle);
 
-			p.custom[0] = 0.0; // unused
-			p.custom[1] = 0.0; // phase [0..1]
-			p.custom[2] = tex_anim_offset * Math::lerp(parameters_min[PARAM_ANIM_OFFSET], parameters_max[PARAM_ANIM_OFFSET], p.anim_offset_rand);
-			p.custom[3] = (1.0 - Math::randf() * lifetime_randomness);
 			p.transform = Transform2D();
 			p.time = 0;
-			p.lifetime = lifetime * p.custom[3];
+			p.lifetime = lifetime * (1.0 - Math::randf() * lifetime_randomness);
 			p.base_color = Color(1, 1, 1, 1);
+
+			p.custom[0] = p.rotation;
+			p.custom[1] = 0.0; // Phase [0;1].
+			p.custom[2] = tex_anim_offset * Math::lerp(parameters_min[PARAM_ANIM_OFFSET], parameters_max[PARAM_ANIM_OFFSET], p.anim_offset_rand);
+			p.custom[3] = p.lifetime;
 
 			switch (emission_shape) {
 				case EMISSION_SHAPE_POINT: {
