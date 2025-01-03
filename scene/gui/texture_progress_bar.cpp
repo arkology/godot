@@ -30,6 +30,8 @@
 
 #include "texture_progress_bar.h"
 
+#include "scene/resources/atlas_texture.h"
+
 void TextureProgressBar::set_under_texture(const Ref<Texture2D> &p_texture) {
 	_set_texture(&under, p_texture);
 }
@@ -419,8 +421,35 @@ void TextureProgressBar::draw_nine_patch_stretched(const Ref<Texture2D> &p_textu
 	}
 	p_texture->get_rect_region(dst_rect, src_rect, dst_rect, src_rect);
 
+	Ref<AtlasTexture> atlas = p_texture;
+	while (atlas.is_valid() && atlas->get_atlas().is_valid()) {
+		atlas->get_atlas()->get_rect_region(dst_rect, src_rect, dst_rect, src_rect);
+		atlas = atlas->get_atlas();
+	}
+
+	print_line(" BEFORE topleft: " + String(topleft));
+	print_line(" BEFORE bottomright: " + String(bottomright));
+	Ref<AtlasTexture> atlas_t = p_texture;
+	if (atlas_t.is_valid() && atlas_t->get_atlas().is_valid()) {
+		//src_rect.position -= atlas_t->get_margin().position;
+		//src_rect.size += (atlas_t->get_margin().size - atlas_t->get_margin().position);
+		//topleft -= atlas_t->get_margin().position;
+		//bottomright += atlas_t->get_margin().position;
+		//bottomright += atlas_t->get_margin().size.floor();
+		//dst_rect.position -= atlas_t->get_margin().position / texture_size;
+		//dst_rect.size -= atlas_t->get_margin().position / texture_size;
+	}
+
+	print_line("dst_rect: " + String(dst_rect));
+	print_line("src_rect: " + String(src_rect));
+	print_line(" AFTER topleft: " + String(topleft));
+	print_line(" AFTER bottomright: " + String(bottomright));
+	print_line("---");
+
 	RID ci = get_canvas_item();
 	RS::get_singleton()->canvas_item_add_nine_patch(ci, dst_rect, src_rect, p_texture->get_rid(), topleft, bottomright, RS::NINE_PATCH_STRETCH, RS::NINE_PATCH_STRETCH, true, p_modulate);
+	RS::get_singleton()->canvas_item_add_rect(ci, dst_rect, Color(0, 0, 1, 0.3), false);
+	RS::get_singleton()->canvas_item_add_rect(ci, Rect2(dst_rect.position + topleft, dst_rect.size - (bottomright + topleft)), Color(1, 0, 0, 0.3), false);
 }
 
 void TextureProgressBar::_notification(int p_what) {
