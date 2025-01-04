@@ -124,6 +124,7 @@ protected:
 private:
 	void _gradient_changed();
 	void _curve_changed();
+	void _texture_changed();
 
 private:
 	Vector<Vector2> _points;

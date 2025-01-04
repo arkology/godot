@@ -32,6 +32,7 @@
 
 #include "core/math/geometry_2d.h"
 #include "line_builder.h"
+#include "scene/resources/atlas_texture.h"
 
 Line2D::Line2D() {
 }
@@ -188,7 +189,16 @@ Ref<Gradient> Line2D::get_gradient() const {
 }
 
 void Line2D::set_texture(const Ref<Texture2D> &p_texture) {
+	if (_texture.is_valid()) {
+		_texture->disconnect_changed(callable_mp(this, &Line2D::_texture_changed));
+	}
+
 	_texture = p_texture;
+
+	if (_texture.is_valid()) {
+		_texture->connect_changed(callable_mp(this, &Line2D::_texture_changed));
+	}
+
 	queue_redraw();
 }
 
@@ -300,13 +310,36 @@ void Line2D::_draw() {
 
 	lb.build();
 
-	RS::get_singleton()->canvas_item_add_triangle_array(
-			get_canvas_item(),
-			lb.indices,
-			lb.vertices,
-			lb.colors,
-			lb.uvs, Vector<int>(), Vector<float>(),
-			texture_rid);
+	const Ref<AtlasTexture> atlas = _texture;
+	if (atlas.is_valid() && atlas->get_atlas().is_valid()) {
+		const Ref<Texture2D> &texture = atlas->get_atlas();
+		const Vector2 atlas_size = texture->get_size();
+
+		const Vector2 remap_min = atlas->get_region().position / atlas_size;
+		const Vector2 remap_max = atlas->get_region().get_end() / atlas_size;
+
+		PackedVector2Array uvs = lb.uvs;
+		for (Vector2 &p : uvs) {
+			p.x = Math::remap(p.x, 0, 1, remap_min.x, remap_max.x);
+			p.y = Math::remap(p.y, 0, 1, remap_min.y, remap_max.y);
+		}
+
+		RS::get_singleton()->canvas_item_add_triangle_array(
+				get_canvas_item(),
+				lb.indices,
+				lb.vertices,
+				lb.colors,
+				uvs, Vector<int>(), Vector<float>(),
+				texture_rid);
+	} else {
+		RS::get_singleton()->canvas_item_add_triangle_array(
+				get_canvas_item(),
+				lb.indices,
+				lb.vertices,
+				lb.colors,
+				lb.uvs, Vector<int>(), Vector<float>(),
+				texture_rid);
+	}
 
 	// DEBUG: Draw wireframe
 	//	if (lb.indices.size() % 3 == 0) {
@@ -331,6 +364,10 @@ void Line2D::_gradient_changed() {
 }
 
 void Line2D::_curve_changed() {
+	queue_redraw();
+}
+
+void Line2D::_texture_changed() {
 	queue_redraw();
 }
 
