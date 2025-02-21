@@ -5760,6 +5760,13 @@ void EditorNode::_toggle_distraction_free_mode() {
 		if (screen == EditorMainScreen::EDITOR_SCRIPT) {
 			script_distraction_free = !script_distraction_free;
 			set_distraction_free_mode(script_distraction_free);
+#ifdef ANDROID_ENABLED
+			if (script_distraction_free) {
+				DisplayServer::get_singleton()->screen_set_orientation(DisplayServer::ScreenOrientation::SCREEN_SENSOR);
+			} else {
+				DisplayServer::get_singleton()->screen_set_orientation(DisplayServer::ScreenOrientation::SCREEN_SENSOR_LANDSCAPE);
+			}
+#endif
 		} else {
 			scene_distraction_free = !scene_distraction_free;
 			set_distraction_free_mode(scene_distraction_free);
