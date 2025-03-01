@@ -968,7 +968,15 @@ void TileSetAtlasSourceEditor::_update_atlas_view() {
 	if (tile_set.is_null()) {
 		return;
 	} else {
-		tile_create_help->set_visible(tools_button_group->get_pressed_button() == tool_setup_atlas_source_button);
+		if (tools_button_group->get_pressed_button() == tool_setup_atlas_source_button) {
+			help_label->set_visible(true);
+			help_label->set_text(vformat(TTR("Hold Ctrl to create multiple tiles.") + "\n" + TTR("Hold Shift to create big tiles.")));
+		} else if (tools_button_group->get_pressed_button() == tool_select_button) {
+			help_label->set_visible(true);
+			help_label->set_text(TTRC("Hold Shift to select multiple regions."));
+		} else {
+			help_label->set_visible(false);
+		}
 	}
 
 	if (tools_button_group->get_pressed_button() != tool_paint_button) {
@@ -2685,18 +2693,15 @@ TileSetAtlasSourceEditor::TileSetAtlasSourceEditor() {
 	tile_atlas_view->connect("transform_changed", callable_mp(this, &TileSetAtlasSourceEditor::_tile_atlas_view_transform_changed).unbind(2));
 	right_panel->add_child(tile_atlas_view);
 
-	tile_create_help = memnew(VBoxContainer);
-	tile_atlas_view->add_child(tile_create_help);
-	tile_create_help->set_mouse_filter(MOUSE_FILTER_IGNORE);
-
-	Label *help_label = memnew(Label(TTR("Hold Ctrl to create multiple tiles.")));
-	tile_create_help->add_child(help_label);
-
-	help_label = memnew(Label(TTR("Hold Shift to create big tiles.")));
-	tile_create_help->add_child(help_label);
-
-	tile_create_help->set_anchors_and_offsets_preset(Control::PRESET_BOTTOM_LEFT, Control::PRESET_MODE_MINSIZE, 8);
-	tile_create_help->set_grow_direction_preset(Control::PRESET_BOTTOM_LEFT);
+	help_label = memnew(Label);
+	help_label->set_mouse_filter(MOUSE_FILTER_IGNORE);
+	help_label->set_anchors_and_offsets_preset(PRESET_FULL_RECT);
+	help_label->set_vertical_alignment(VERTICAL_ALIGNMENT_BOTTOM);
+	help_label->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	help_label->add_theme_constant_override("outline_size", Math::ceil(8 * EDSCALE));
+	help_label->add_theme_color_override("font_outline_color", Color(0, 0, 0));
+	help_label->add_theme_color_override(SceneStringName(font_color), Color(1, 1, 1));
+	tile_atlas_view->add_child(help_label);
 
 	base_tile_popup_menu = memnew(PopupMenu);
 	base_tile_popup_menu->add_shortcut(ED_GET_SHORTCUT("tiles_editor/delete"), TILE_DELETE);
