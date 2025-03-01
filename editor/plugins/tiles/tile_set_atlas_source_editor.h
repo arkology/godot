@@ -160,7 +160,7 @@ private:
 
 	// -- Atlas view --
 	TileAtlasView *tile_atlas_view = nullptr;
-	VBoxContainer *tile_create_help = nullptr;
+	Label *help_label = nullptr;
 
 	// Dragging
 	enum DragType {
