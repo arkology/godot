@@ -199,6 +199,11 @@ void EditorAudioBus::_notification(int p_what) {
 			}
 
 			set_process(is_visible_in_tree());
+			
+			if (is_visible()) {
+				print_line("EditorAudioBus minimum size: ", get_minimum_size());
+				print_line("EditorAudioBus combined minimum size: ", get_combined_minimum_size());
+			}
 		} break;
 
 		case NOTIFICATION_MOUSE_EXIT:
@@ -1118,6 +1123,13 @@ void EditorAudioBuses::_notification(int p_what) {
 			if (edited) {
 				AudioServer::get_singleton()->set_edited(false);
 				save_timer->start();
+			}
+		} break;
+		
+		case NOTIFICATION_VISIBILITY_CHANGED: {
+			if (is_visible()) {
+				print_line("EditorAudioBuses minimum size: ", get_minimum_size());
+				print_line("EditorAudioBuses combined minimum size: ", get_combined_minimum_size());
 			}
 		} break;
 	}
