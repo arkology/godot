@@ -1045,8 +1045,16 @@ GameView::GameView(Ref<GameViewDebugger> p_debugger, WindowWrapper *p_wrapper) {
 
 	menu = embed_options_menu->get_popup();
 	menu->connect(SceneStringName(id_pressed), callable_mp(this, &GameView::_embed_options_menu_menu_id_pressed));
-	menu->add_check_item(TTR("Embed Game on Next Play"), EMBED_RUN_GAME_EMBEDDED);
-	menu->add_check_item(TTR("Make Game Workspace Floating on Next Play"), EMBED_MAKE_FLOATING_ON_PLAY);
+	menu->add_check_item(TTRС("Embed Game on Next Play"), EMBED_RUN_GAME_EMBEDDED);
+	menu->add_check_item(TTRС("Make Game Workspace Floating on Next Play"), EMBED_MAKE_FLOATING_ON_PLAY);
+	menu->add_separator();
+	menu->add_radio_check_item(TTRС("Fixed Size"), SIZE_MODE_FIXED);
+	menu->set_item_tooltip(SIZE_MODE_FIXED, TTRС("Embedded game size is based on project settings.\nThe 'Keep Aspect' mode is used when the Game Workspace is smaller than the desired size."));
+	menu->set_item_checked(menu->get_item_index(SIZE_MODE_FIXED), true);
+	menu->add_radio_check_item(TTRС("Keep Aspect Ratio"), SIZE_MODE_KEEP_ASPECT);
+	menu->set_item_tooltip(SIZE_MODE_KEEP_ASPECT, TTRС("Keep the aspect ratio of the embedded game."));
+	menu->add_radio_check_item(TTRС("Stretch to Fit"), SIZE_MODE_STRETCH);
+	menu->set_item_tooltip(SIZE_MODE_STRETCH, TTRС("Embedded game size stretches to fit the Game Workspace."));
 
 	main_menu_hbox->add_spacer();
 
