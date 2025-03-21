@@ -96,7 +96,7 @@ class GameView : public VBoxContainer {
 	};
 
 	enum EmbedSizeMode {
-		SIZE_MODE_FIXED = EMBED_MAKE_FLOATING_ON_PLAY + 1,
+		SIZE_MODE_FIXED,
 		SIZE_MODE_KEEP_ASPECT,
 		SIZE_MODE_STRETCH,
 	};
