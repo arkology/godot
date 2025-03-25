@@ -431,6 +431,8 @@ class ThemeEditor : public VBoxContainer {
 
 	Ref<Theme> theme;
 
+	Button *theme_close_button = nullptr;
+
 	TabBar *preview_tabs = nullptr;
 	PanelContainer *preview_tabs_content = nullptr;
 	Button *add_preview_button = nullptr;
@@ -441,7 +443,6 @@ class ThemeEditor : public VBoxContainer {
 	Label *theme_name = nullptr;
 	ThemeItemEditorDialog *theme_edit_dialog = nullptr;
 
-	void _theme_save_button_cbk(bool p_save_as);
 	void _theme_edit_button_cbk();
 	void _theme_close_button_cbk();
 	void _scene_closed(const String &p_path);
