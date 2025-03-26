@@ -1136,7 +1136,7 @@ void EditorAudioBuses::_notification(int p_what) {
 			if (is_first_time && is_visible()) {
 				int offset = EditorNode::get_bottom_panel()->get_combined_minimum_size().y + get_combined_minimum_size().y;
 				if (bus_hb->get_child_count() > 0) {
-					offset += bus_hb->get_child(0)->get_combined_minimum_size().y;
+					offset += Object::cast_to<Control>(bus_hb->get_child(0))->get_combined_minimum_size().y;
 					print_line("Has child");
 				}
 				print_line("Setting offset: ", -offset);
