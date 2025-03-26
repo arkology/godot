@@ -5498,6 +5498,7 @@ void EditorNode::_load_central_editor_layout_from_config(Ref<ConfigFile> p_confi
 	if (p_config_file->has_section_key(EDITOR_NODE_CONFIG_SECTION, "center_split_offset")) {
 		int center_split_offset = p_config_file->get_value(EDITOR_NODE_CONFIG_SECTION, "center_split_offset");
 		center_split->set_split_offset(center_split_offset);
+		print_line("center_split->set_split_offset: ", itos(center_split_offset));
 	}
 
 	// Debugger tab.
