@@ -1088,6 +1088,8 @@ EditorAudioBuses *EditorAudioBuses::register_editor() {
 	return audio_buses;
 }
 
+static bool EditorAudioBuses::is_first_time = true;
+
 void EditorAudioBuses::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE:
@@ -1127,9 +1129,15 @@ void EditorAudioBuses::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_VISIBILITY_CHANGED: {
-			if (is_visible()) {
-				print_line("EditorAudioBuses minimum size: ", get_minimum_size());
-				print_line("EditorAudioBuses combined minimum size: ", get_combined_minimum_size());
+			print_line("EditorAudioBuses minimum size: ", get_minimum_size());
+			print_line("EditorAudioBuses combined minimum size: ", get_combined_minimum_size());
+			print_line("EditorNode::get_bottom_panel combined minimum size: ", EditorNode::get_bottom_panel()->get_combined_minimum_size());
+
+			if (is_first_time && is_visible) {
+				int offset = EditorNode::get_bottom_panel()->get_combined_minimum_size().y + get_combined_minimum_size();
+				print_line("Setting offset: ", -offset);
+				EditorNode::get_singleton->set_center_split_offset(-offset);
+				is_first_time = false;
 			}
 		} break;
 	}
@@ -1345,7 +1353,7 @@ EditorAudioBuses::EditorAudioBuses() {
 
 	bus_scroll = memnew(ScrollContainer);
 	bus_scroll->set_v_size_flags(SIZE_EXPAND_FILL);
-	bus_scroll->set_vertical_scroll_mode(ScrollContainer::SCROLL_MODE_DISABLED);
+	// bus_scroll->set_vertical_scroll_mode(ScrollContainer::SCROLL_MODE_DISABLED);
 	add_child(bus_scroll);
 	bus_hb = memnew(HBoxContainer);
 	bus_hb->set_v_size_flags(SIZE_EXPAND_FILL);
