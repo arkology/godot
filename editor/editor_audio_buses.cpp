@@ -1088,7 +1088,7 @@ EditorAudioBuses *EditorAudioBuses::register_editor() {
 	return audio_buses;
 }
 
-static bool EditorAudioBuses::is_first_time = true;
+static bool is_first_time = true;
 
 void EditorAudioBuses::_notification(int p_what) {
 	switch (p_what) {
@@ -1137,7 +1137,7 @@ void EditorAudioBuses::_notification(int p_what) {
 				int offset = EditorNode::get_bottom_panel()->get_combined_minimum_size().y + get_combined_minimum_size().y;
 				print_line("Combined size: ", EditorNode::get_bottom_panel()->get_combined_minimum_size() + get_combined_minimum_size());
 				print_line("Setting offset: ", -offset);
-				EditorNode::get_singleton->set_center_split_offset(-offset);
+				EditorNode::get_singleton()->set_center_split_offset(-offset);
 				is_first_time = false;
 			}
 		} break;
