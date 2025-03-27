@@ -4367,11 +4367,15 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 
 	site_search = memnew(Button);
 	site_search->set_flat(true);
+	site_search->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	site_search->set_text_overrun_behavior(TextServer::OVERRUN_TRIM_ELLIPSIS);
 	site_search->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_menu_option).bind(SEARCH_WEBSITE));
 	menu_hb->add_child(site_search);
 
 	help_search = memnew(Button);
 	help_search->set_flat(true);
+	help_search->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	help_search->set_text_overrun_behavior(TextServer::OVERRUN_TRIM_ELLIPSIS);
 	help_search->set_text(TTR("Search Help"));
 	help_search->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_menu_option).bind(SEARCH_HELP));
 	menu_hb->add_child(help_search);
