@@ -47,6 +47,7 @@
 #include "scene/gui/texture_rect.h"
 #include "scene/resources/gradient_texture.h"
 #include "scene/resources/image_texture.h"
+#include <chrono>
 
 void EditorResourcePicker::_update_resource() {
 	String resource_path;
@@ -103,7 +104,9 @@ void EditorResourcePicker::_update_resource_preview(const String &p_path, const 
 		}
 
 		if (p_preview.is_valid()) {
-			preview_rect->set_offset(SIDE_LEFT, assign_button->get_button_icon()->get_width() + assign_button->get_theme_stylebox(CoreStringName(normal))->get_content_margin(SIDE_LEFT) + get_theme_constant(SNAME("h_separation"), SNAME("Button")));
+			auto t0 = std::chrono::high_resolution_clock::now();
+			preview_rect->set_offset(SIDE_LEFT, assign_button->get_button_icon()->get_width() + assign_button->get_theme_stylebox(CoreStringName(normal))->get_content_margin(SIDE_LEFT) + theme_cache.button_h_separation);
+			// preview_rect->set_offset(SIDE_LEFT, assign_button->get_button_icon()->get_width() + assign_button->get_theme_stylebox(CoreStringName(normal))->get_content_margin(SIDE_LEFT) + get_theme_constant(SNAME("h_separation"), SNAME("Button")));
 
 			// Resource-specific stretching.
 			if (Ref<GradientTexture1D>(edited_resource).is_valid() || Ref<Gradient>(edited_resource).is_valid()) {
@@ -118,6 +121,8 @@ void EditorResourcePicker::_update_resource_preview(const String &p_path, const 
 
 			preview_rect->set_texture(p_preview);
 			assign_button->set_text("");
+			auto t1 = std::chrono::high_resolution_clock::now();
+			print_line("EditorResourcePicker::_update_resource_preview, ns: ", itos(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count()));
 		}
 	}
 }
@@ -200,6 +205,7 @@ void EditorResourcePicker::_update_menu() {
 }
 
 void EditorResourcePicker::_update_menu_items() {
+	auto t0 = std::chrono::high_resolution_clock::now();
 	_ensure_resource_menu();
 	edit_menu->clear();
 
@@ -208,32 +214,32 @@ void EditorResourcePicker::_update_menu_items() {
 		set_create_options(edit_menu);
 
 		// Add an option to load a resource from a file using the QuickOpen dialog.
-		edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Load")), TTR("Quick Load..."), OBJ_MENU_QUICKLOAD);
+		edit_menu->add_icon_item(theme_cache.load, TTR("Quick Load..."), OBJ_MENU_QUICKLOAD);
 		edit_menu->set_item_tooltip(-1, TTR("Opens a quick menu to select from a list of allowed Resource files."));
 
 		// Add an option to load a resource from a file using the regular file dialog.
-		edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Load")), TTR("Load..."), OBJ_MENU_LOAD);
+		edit_menu->add_icon_item(theme_cache.load, TTR("Load..."), OBJ_MENU_LOAD);
 	}
 
 	// Add options for changing existing value of the resource.
 	if (edited_resource.is_valid()) {
-		// Determine if the edited resource is part of another scene (foreign) which was imported
+		// Determine if the edited resource is part of another scene (foreign) which was imported.
 		bool is_edited_resource_foreign_import = EditorNode::get_singleton()->is_resource_read_only(edited_resource, true);
 
 		// If the resource is determined to be foreign and imported, change the menu entry's description to 'inspect' rather than 'edit'
 		// since will only be able to view its properties in read-only mode.
 		if (is_edited_resource_foreign_import) {
 			// The 'Search' icon is a magnifying glass, which seems appropriate, but maybe a bespoke icon is preferred here.
-			edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Search")), TTR("Inspect"), OBJ_MENU_INSPECT);
+			edit_menu->add_icon_item(theme_cache.search, TTR("Inspect"), OBJ_MENU_INSPECT);
 		} else {
-			edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Edit")), TTR("Edit"), OBJ_MENU_INSPECT);
+			edit_menu->add_icon_item(theme_cache.edit, TTR("Edit"), OBJ_MENU_INSPECT);
 		}
 
 		if (is_editable()) {
 			if (!_is_custom_type_script()) {
-				edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Clear")), TTR("Clear"), OBJ_MENU_CLEAR);
+				edit_menu->add_icon_item(theme_cache.clear, TTR("Clear"), OBJ_MENU_CLEAR);
 			}
-			edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Duplicate")), TTR("Make Unique"), OBJ_MENU_MAKE_UNIQUE);
+			edit_menu->add_icon_item(theme_cache.duplicate, TTR("Make Unique"), OBJ_MENU_MAKE_UNIQUE);
 
 			// Check whether the resource has subresources.
 			List<PropertyInfo> property_list;
@@ -246,16 +252,16 @@ void EditorResourcePicker::_update_menu_items() {
 				}
 			}
 			if (has_subresources) {
-				edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Duplicate")), TTR("Make Unique (Recursive)"), OBJ_MENU_MAKE_UNIQUE_RECURSIVE);
+				edit_menu->add_icon_item(theme_cache.duplicate, TTR("Make Unique (Recursive)"), OBJ_MENU_MAKE_UNIQUE_RECURSIVE);
 			}
 
-			edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Save")), TTR("Save"), OBJ_MENU_SAVE);
-			edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Save")), TTR("Save As..."), OBJ_MENU_SAVE_AS);
+			edit_menu->add_icon_item(theme_cache.save, TTR("Save"), OBJ_MENU_SAVE);
+			edit_menu->add_icon_item(theme_cache.save, TTR("Save As..."), OBJ_MENU_SAVE_AS);
 		}
 
 		if (edited_resource->get_path().is_resource_file()) {
 			edit_menu->add_separator();
-			edit_menu->add_icon_item(get_editor_theme_icon(SNAME("ShowInFileSystem")), TTR("Show in FileSystem"), OBJ_MENU_SHOW_IN_FILE_SYSTEM);
+			edit_menu->add_icon_item(theme_cache.show_in_filesystem, TTR("Show in FileSystem"), OBJ_MENU_SHOW_IN_FILE_SYSTEM);
 		}
 	}
 
@@ -305,13 +311,15 @@ void EditorResourcePicker::_update_menu_items() {
 			if (has_theme_icon(what, EditorStringName(EditorIcons))) {
 				icon = get_editor_theme_icon(what);
 			} else {
-				icon = get_editor_theme_icon(SNAME("Object"));
+				icon = theme_cache.object;
 			}
 
 			edit_menu->add_icon_item(icon, vformat(TTR("Convert to %s"), what), CONVERT_BASE_ID + relative_id);
 			relative_id++;
 		}
 	}
+	auto t1 = std::chrono::high_resolution_clock::now();
+	print_line("EditorResourcePicker::_update_menu_items, ns: ", itos(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count()));
 }
 
 void EditorResourcePicker::_edit_menu_cbk(int p_which) {
@@ -546,8 +554,12 @@ bool EditorResourcePicker::handle_menu_selected(int p_which) {
 
 void EditorResourcePicker::_button_draw() {
 	if (dropping) {
-		Color color = get_theme_color(SNAME("accent_color"), EditorStringName(Editor));
-		assign_button->draw_rect(Rect2(Point2(), assign_button->get_size()), color, false);
+		auto t0 = std::chrono::high_resolution_clock::now();
+		assign_button->draw_rect(Rect2(Point2(), assign_button->get_size()), theme_cache.accent_color, false);
+		// Color color = get_theme_color(SNAME("accent_color"), EditorStringName(Editor));
+		// assign_button->draw_rect(Rect2(Point2(), assign_button->get_size()), color, false);
+		auto t1 = std::chrono::high_resolution_clock::now();
+		print_line("EditorResourcePicker::_button_draw, ns: ", itos(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count()));
 	}
 }
 
@@ -820,6 +832,27 @@ void EditorResourcePicker::drop_data_fw(const Point2 &p_point, const Variant &p_
 	}
 }
 
+void EditorResourcePicker::_update_theme_item_cache() {
+	HBoxContainer::_update_theme_item_cache();
+	auto t0 = std::chrono::high_resolution_clock::now();
+	theme_cache.panel_tree = get_theme_stylebox(SceneStringName(panel), SNAME("Tree"));
+
+	theme_cache.load = get_editor_theme_icon(SNAME("Load"));
+	theme_cache.save = get_editor_theme_icon(SNAME("Save"));
+	theme_cache.search = get_editor_theme_icon(SNAME("Search"));
+	theme_cache.edit = get_editor_theme_icon(SNAME("Edit"));
+	theme_cache.clear = get_editor_theme_icon(SNAME("Clear"));
+	theme_cache.duplicate = get_editor_theme_icon(SNAME("Duplicate"));
+	theme_cache.object = get_editor_theme_icon(SNAME("Object"));
+	theme_cache.show_in_filesystem = get_editor_theme_icon(SNAME("ShowInFileSystem"));
+
+	theme_cache.class_icon_size = get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor));
+	theme_cache.button_h_separation = get_theme_constant(SNAME("h_separation"), SNAME("Button"));
+	theme_cache.accent_color = get_theme_color(SNAME("accent_color"), EditorStringName(Editor));
+	auto t1 = std::chrono::high_resolution_clock::now();
+	print_line("EditorResourcePicker::_update_theme_item_cache, ns: ", itos(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count()));
+}
+
 void EditorResourcePicker::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_update_resource_preview"), &EditorResourcePicker::_update_resource_preview);
 
@@ -850,20 +883,30 @@ void EditorResourcePicker::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			_update_resource();
-			[[fallthrough]];
-		}
+			// [[fallthrough]];
+		} break;
+
 		case NOTIFICATION_THEME_CHANGED: {
-			const int icon_width = get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor));
-			assign_button->add_theme_constant_override("icon_max_width", icon_width);
+			auto t0 = std::chrono::high_resolution_clock::now();
+			// const int icon_width = get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor));
+			// assign_button->add_theme_constant_override("icon_max_width", icon_width);
+			assign_button->add_theme_constant_override("icon_max_width", theme_cache.class_icon_size);
 			if (edit_menu) {
-				edit_menu->add_theme_constant_override("icon_max_width", icon_width);
+				// edit_menu->add_theme_constant_override("icon_max_width", icon_width);
+				edit_menu->add_theme_constant_override("icon_max_width", theme_cache.class_icon_size);
 			}
 
 			edit_button->set_button_icon(get_theme_icon(SNAME("select_arrow"), SNAME("Tree")));
+			auto t1 = std::chrono::high_resolution_clock::now();
+			print_line("EditorResourcePicker::NOTIFICATION_THEME_CHANGED, ns: ", itos(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count()));
 		} break;
 
 		case NOTIFICATION_DRAW: {
-			draw_style_box(get_theme_stylebox(SceneStringName(panel), SNAME("Tree")), Rect2(Point2(), get_size()));
+			auto t0 = std::chrono::high_resolution_clock::now();
+			draw_style_box(theme_cache.panel_tree, Rect2(Point2(), get_size()));
+			// draw_style_box(get_theme_stylebox(SceneStringName(panel), SNAME("Tree")), Rect2(Point2(), get_size()));
+			auto t1 = std::chrono::high_resolution_clock::now();
+			print_line("EditorResourcePicker::NOTIFICATION_DRAW, ns: ", itos(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count()));
 		} break;
 
 		case NOTIFICATION_DRAG_BEGIN: {
@@ -1011,11 +1054,15 @@ void EditorResourcePicker::_ensure_resource_menu() {
 	if (edit_menu) {
 		return;
 	}
+	auto t0 = std::chrono::high_resolution_clock::now();
 	edit_menu = memnew(PopupMenu);
-	edit_menu->add_theme_constant_override("icon_max_width", get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor)));
+	edit_menu->add_theme_constant_override("icon_max_width", theme_cache.class_icon_size);
+	// edit_menu->add_theme_constant_override("icon_max_width", get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor)));
 	add_child(edit_menu);
 	edit_menu->connect(SceneStringName(id_pressed), callable_mp(this, &EditorResourcePicker::_edit_menu_cbk));
 	edit_menu->connect("popup_hide", callable_mp((BaseButton *)edit_button, &BaseButton::set_pressed).bind(false));
+	auto t1 = std::chrono::high_resolution_clock::now();
+	print_line("EditorResourcePicker::_ensure_resource_menu, ns: ", itos(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count()));
 }
 
 void EditorResourcePicker::_gather_resources_to_duplicate(const Ref<Resource> p_resource, TreeItem *p_item, const String &p_property_name) const {

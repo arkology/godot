@@ -80,6 +80,24 @@ class EditorResourcePicker : public HBoxContainer {
 		CONVERT_BASE_ID = 1000,
 	};
 
+	struct ThemeCache {
+		Ref<StyleBox> panel_tree;
+
+		Ref<Texture2D> load;
+		Ref<Texture2D> save;
+		Ref<Texture2D> search;
+		Ref<Texture2D> edit;
+		Ref<Texture2D> clear;
+		Ref<Texture2D> duplicate;
+		Ref<Texture2D> object;
+		Ref<Texture2D> show_in_filesystem;
+
+		Color accent_color;
+
+		int class_icon_size = 0;
+		int button_h_separation = 0;
+	} theme_cache;
+
 	Object *resource_owner = nullptr;
 
 	PopupMenu *edit_menu = nullptr;
@@ -117,6 +135,8 @@ protected:
 	virtual void _update_resource();
 
 	Button *get_assign_button() { return assign_button; }
+
+	virtual void _update_theme_item_cache() override;
 	static void _bind_methods();
 	void _notification(int p_what);
 
