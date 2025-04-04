@@ -34,6 +34,7 @@
 #include "editor/editor_command_palette.h"
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
+#include "editor/gui/editor_scene_tabs.h"
 #include "editor/gui/editor_toaster.h"
 #include "editor/gui/editor_version_button.h"
 #include "editor/themes/editor_scale.h"
@@ -157,7 +158,20 @@ void EditorBottomPanel::_pin_button_toggled(bool p_pressed) {
 }
 
 void EditorBottomPanel::_expand_button_toggled(bool p_pressed) {
+	if (distraction_free == nullptr) {
+		distraction_free = EditorNode::get_singleton()->get_distraction_free_button();
+	}
 	EditorNode::get_top_split()->set_visible(!p_pressed);
+
+	if (p_pressed) {
+		distraction_free->reparent(bottom_hbox);
+		distraction_free->add_theme_style_override(SceneStringName(pressed), EditorNode::get_singleton()->get_editor_theme()->get_stylebox(CoreStringName(normal), "Button"));
+		bottom_hbox->move_child(distraction_free, -2);
+	} else {
+		distraction_free->get_parent()->remove_child(distraction_free);
+		distraction_free->add_theme_style_override(SceneStringName(pressed), EditorNode::get_singleton()->get_editor_theme()->get_stylebox(CoreStringName(normal), "FlatMenuButton"));
+		EditorNode::get_singleton()->get_editor_scene_tabs()->add_extra_button(distraction_free);
+	}
 }
 
 bool EditorBottomPanel::_button_drag_hover(const Vector2 &, const Variant &, Button *p_button, Control *p_control) {

@@ -59,6 +59,7 @@ class EditorBottomPanel : public PanelContainer {
 	HBoxContainer *button_hbox = nullptr;
 	EditorToaster *editor_toaster = nullptr;
 	Button *pin_button = nullptr;
+	Button *distraction_free = nullptr;
 	Button *expand_button = nullptr;
 	Control *last_opened_control = nullptr;
 
