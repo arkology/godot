@@ -214,6 +214,8 @@ void GradientTexture2DEdit::_draw() {
 	const Color focus_modulate = Color(0.4, 1, 1);
 	bool modulate_handle_from = grabbed == HANDLE_FROM || hovered == HANDLE_FROM;
 	bool modulate_handle_to = grabbed == HANDLE_TO || hovered == HANDLE_TO;
+	draw_line(_get_handle_pos(HANDLE_FROM), _get_handle_pos(HANDLE_TO), Color(0, 0, 0), 2 * EDSCALE, true);
+	draw_line(_get_handle_pos(HANDLE_FROM), _get_handle_pos(HANDLE_TO), Color(1, 1, 1), 1 * EDSCALE, true);
 	draw_texture(fill_from_icon, (_get_handle_pos(HANDLE_FROM) - handle_size / 2).round(), modulate_handle_from ? focus_modulate : Color(1, 1, 1));
 	draw_texture(fill_to_icon, (_get_handle_pos(HANDLE_TO) - handle_size / 2).round(), modulate_handle_to ? focus_modulate : Color(1, 1, 1));
 }
