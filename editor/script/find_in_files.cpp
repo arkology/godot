@@ -854,13 +854,20 @@ void FindInFilesPanel::_notification(int p_what) {
 void FindInFilesPanel::_on_result_found(const String &fpath, int line_number, int begin, int end, String text) {
 	TreeItem *file_item;
 	Ref<Texture2D> remove_texture = get_editor_theme_icon(SNAME("Close"));
+	Ref<Texture2D> replace_texture = get_editor_theme_icon(SNAME("Edit"));
 
 	HashMap<String, TreeItem *>::Iterator E = _file_items.find(fpath);
 	if (!E) {
 		file_item = _results_display->create_item();
 		file_item->set_text(0, fpath);
 		file_item->set_metadata(0, fpath);
-		file_item->add_button(0, remove_texture, -1, false, TTR("Remove result"));
+
+		//if (_with_replace) {
+		//	file_item->add_button(0, replace_texture, 0, false, TTR("Replace"));
+		//	file_item->add_button(0, remove_texture, 1, false, TTR("Remove result"));
+		//} else {
+		file_item->add_button(0, remove_texture, 1, false, TTR("Remove result"));
+		//}
 
 		// The width of this column is restrained to checkboxes,
 		// but that doesn't make sense for the parent items,
@@ -903,9 +910,11 @@ void FindInFilesPanel::_on_result_found(const String &fpath, int line_number, in
 		item->set_cell_mode(0, TreeItem::CELL_MODE_CHECK);
 		item->set_checked(0, true);
 		item->set_editable(0, true);
-		item->add_button(1, remove_texture, -1, false, TTR("Remove result"));
+		//item->add_button(1, remove_texture, -1, false, TTR("Remove result"));
+		item->add_button(1, replace_texture, 0, false, TTR("Replace"));
+		item->add_button(1, remove_texture, 1, false, TTR("Remove result"));
 	} else {
-		item->add_button(0, remove_texture, -1, false, TTR("Remove result"));
+		item->add_button(0, remove_texture, 1, false, TTR("Remove result"));
 	}
 }
 
