@@ -165,8 +165,8 @@ class TreeItem;
 class ProgressBar;
 
 // Display search results
-class FindInFilesPanel : public Control {
-	GDCLASS(FindInFilesPanel, Control);
+class FindInFilesPanel : public VBoxContainer {
+	GDCLASS(FindInFilesPanel, VBoxContainer);
 
 public:
 	static const char *SIGNAL_RESULT_SELECTED;

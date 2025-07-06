@@ -690,13 +690,6 @@ FindInFilesPanel::FindInFilesPanel() {
 	_finder->connect(SceneStringName(finished), callable_mp(this, &FindInFilesPanel::_on_finished));
 	add_child(_finder);
 
-	VBoxContainer *vbc = memnew(VBoxContainer);
-	vbc->set_anchor_and_offset(SIDE_LEFT, ANCHOR_BEGIN, 0);
-	vbc->set_anchor_and_offset(SIDE_TOP, ANCHOR_BEGIN, 0);
-	vbc->set_anchor_and_offset(SIDE_RIGHT, ANCHOR_END, 0);
-	vbc->set_anchor_and_offset(SIDE_BOTTOM, ANCHOR_END, 0);
-	add_child(vbc);
-
 	{
 		HBoxContainer *hbc = memnew(HBoxContainer);
 
@@ -705,6 +698,10 @@ FindInFilesPanel::FindInFilesPanel() {
 		hbc->add_child(find_label);
 
 		_search_text_label = memnew(Label);
+		_search_text_label->set_text_overrun_behavior(TextServer::OVERRUN_TRIM_ELLIPSIS);
+		_search_text_label->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+		_search_text_label->set_h_size_flags(SIZE_EXPAND_FILL);
+		_search_text_label->set_v_size_flags(SIZE_SHRINK_CENTER);
 		_search_text_label->set_focus_mode(FOCUS_ACCESSIBILITY);
 		hbc->add_child(_search_text_label);
 
@@ -735,7 +732,7 @@ FindInFilesPanel::FindInFilesPanel() {
 		_close_button->connect(SceneStringName(pressed), callable_mp(this, &FindInFilesPanel::_on_close_button_clicked));
 		hbc->add_child(_close_button);
 
-		vbc->add_child(hbc);
+		add_child(hbc);
 	}
 
 	_results_display = memnew(Tree);
@@ -752,7 +749,7 @@ FindInFilesPanel::FindInFilesPanel() {
 	_results_display->add_theme_constant_override("inner_item_margin_left", 0);
 	_results_display->add_theme_constant_override("inner_item_margin_right", 0);
 	_results_display->create_item(); // Root
-	vbc->add_child(_results_display);
+	add_child(_results_display);
 
 	{
 		_replace_container = memnew(HBoxContainer);
@@ -774,7 +771,7 @@ FindInFilesPanel::FindInFilesPanel() {
 
 		_replace_container->hide();
 
-		vbc->add_child(_replace_container);
+		add_child(_replace_container);
 	}
 }
 
