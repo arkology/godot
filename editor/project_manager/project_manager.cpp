@@ -749,7 +749,7 @@ void ProjectManager::_erase_project() {
 	}
 
 	erase_ask_label->set_text(confirm_message);
-	//delete_project_contents->set_pressed(false);
+	delete_project_contents->set_pressed(false);
 	erase_ask->popup_centered();
 }
 
@@ -759,7 +759,7 @@ void ProjectManager::_erase_missing_projects() {
 }
 
 void ProjectManager::_erase_project_confirm() {
-	project_list->erase_selected_projects(false);
+	project_list->erase_selected_projects(delete_project_contents->is_pressed());
 	_update_project_buttons();
 	_update_list_placeholder();
 }
@@ -823,6 +823,22 @@ void ProjectManager::_open_recovery_mode_ask(bool manual) {
 
 	open_recovery_mode_ask->set_text(recovery_mode_details);
 	open_recovery_mode_ask->popup_centered(Size2(550, 70) * EDSCALE);
+}
+
+void ProjectManager::_update_erase_project_message() {
+	bool safe_deletion = true;
+
+	Vector<ProjectList::Item> selected_projects = project_list->get_selected_projects();
+	for (const ProjectList::Item &item : selected_projects) {
+		print_line(item.path);
+	}
+
+	delete_project_contents->set_pressed(safe_deletion);
+	delete_project_contents->set_visible(safe_deletion);
+	if (!safe_deletion) {
+		delete_project_contents->set_pressed(false);
+	}
+	delete_project_contents_mgs_label->set_visible(!safe_deletion);
 }
 
 void ProjectManager::_on_projects_updated() {
@@ -1701,6 +1717,7 @@ ProjectManager::ProjectManager() {
 		erase_ask = memnew(ConfirmationDialog);
 		erase_ask->set_ok_button_text(TTRC("Remove"));
 		erase_ask->get_ok_button()->connect(SceneStringName(pressed), callable_mp(this, &ProjectManager::_erase_project_confirm));
+		erase_ask->connect("about_to_popup", callable_mp(this, &ProjectManager::_update_erase_project_message));
 		add_child(erase_ask);
 
 		VBoxContainer *erase_ask_vb = memnew(VBoxContainer);
@@ -1710,11 +1727,17 @@ ProjectManager::ProjectManager() {
 		erase_ask_label->set_focus_mode(FOCUS_ACCESSIBILITY);
 		erase_ask_vb->add_child(erase_ask_label);
 
-		// Comment out for now until we have a better warning system to
-		// ensure users delete their project only.
-		//delete_project_contents = memnew(CheckBox);
-		//delete_project_contents->set_text(TTRC("Also delete project contents (no undo!)"));
-		//erase_ask_vb->add_child(delete_project_contents);
+		delete_project_contents = memnew(CheckBox);
+		delete_project_contents->set_text(TTRC("Also delete project contents (no undo!)"));
+		erase_ask_vb->add_child(delete_project_contents);
+
+		delete_project_contents_mgs_label = memnew(Label);
+		delete_project_contents_mgs_label->set_focus_mode(Control::FOCUS_ACCESSIBILITY);
+		delete_project_contents_mgs_label->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+		delete_project_contents_mgs_label->set_custom_minimum_size(Size2(200, 0) * EDSCALE);
+		delete_project_contents_mgs_label->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+		delete_project_contents_mgs_label->set_visible(false);
+		erase_ask_vb->add_child(delete_project_contents_mgs_label);
 
 		multi_open_ask = memnew(ConfirmationDialog);
 		multi_open_ask->set_ok_button_text(TTRC("Edit"));

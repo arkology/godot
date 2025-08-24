@@ -49,6 +49,7 @@ class ProjectList;
 class QuickSettingsDialog;
 class RichTextLabel;
 class TabContainer;
+class Tree;
 class VBoxContainer;
 
 class ProjectManager : public Control {
@@ -170,9 +171,9 @@ class ProjectManager : public Control {
 
 	ConfirmationDialog *erase_ask = nullptr;
 	Label *erase_ask_label = nullptr;
-	// Comment out for now until we have a better warning system to
-	// ensure users delete their project only.
-	//CheckBox *delete_project_contents = nullptr;
+	CheckBox *delete_project_contents = nullptr;
+	Label *delete_project_contents_mgs_label = nullptr;
+	Tree *delete_project_contents_mgs_tree = nullptr;
 	ConfirmationDialog *erase_missing_ask = nullptr;
 	ConfirmationDialog *multi_open_ask = nullptr;
 	ConfirmationDialog *multi_run_ask = nullptr;
@@ -201,6 +202,8 @@ class ProjectManager : public Control {
 	void _update_project_buttons();
 	void _open_options_popup();
 	void _open_recovery_mode_ask(bool manual = false);
+
+	void _update_erase_project_message();
 
 	void _on_project_created(const String &dir, bool edit);
 	void _on_project_duplicated(const String &p_original_path, const String &p_duplicate_path, bool p_edit);
