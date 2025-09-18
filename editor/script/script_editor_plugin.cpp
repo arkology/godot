@@ -4431,30 +4431,39 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	debugger->connect("breakpoint_set_in_tree", callable_mp(this, &ScriptEditor::_set_breakpoint));
 	debugger->connect("breakpoints_cleared_in_tree", callable_mp(this, &ScriptEditor::_clear_breakpoints));
 
-	menu_hb->add_spacer();
+	// menu_hb->add_spacer();
 
 	script_icon = memnew(TextureRect);
-	menu_hb->add_child(script_icon);
+	// menu_hb->add_child(script_icon);
 	script_name_label = memnew(Label);
 	script_name_label->set_focus_mode(FOCUS_ACCESSIBILITY);
-	menu_hb->add_child(script_name_label);
+	// menu_hb->add_child(script_name_label);
 
 	script_icon->hide();
 	script_name_label->hide();
 
-	menu_hb->add_spacer();
+	// menu_hb->add_spacer();
+
+	Control *search_buttons_ph_control = memnew(Control);
+	search_buttons_ph_control->set_h_size_flags(SIZE_EXPAND_FILL);
+	menu_hb->add_child(search_buttons_ph_control);
+
+	HBoxContainer *search_buttons_hb = memnew(HBoxContainer);
+	search_buttons_ph_control->add_child(search_buttons_hb);
+	search_buttons_hb->set_alignment(BoxContainer::ALIGNMENT_END);
+	search_buttons_hb->set_anchors_preset(PRESET_RIGHT_WIDE);
 
 	site_search = memnew(Button);
 	site_search->set_theme_type_variation(SceneStringName(FlatButton));
 	site_search->set_accessibility_name(TTRC("Site Search"));
 	site_search->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_menu_option).bind(SEARCH_WEBSITE));
-	menu_hb->add_child(site_search);
+	search_buttons_hb->add_child(site_search);
 
 	help_search = memnew(Button);
 	help_search->set_theme_type_variation(SceneStringName(FlatButton));
 	help_search->set_text(TTRC("Search Help"));
 	help_search->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_menu_option).bind(SEARCH_HELP));
-	menu_hb->add_child(help_search);
+	search_buttons_hb->add_child(help_search);
 	help_search->set_tooltip_text(TTRC("Search the reference documentation."));
 
 	menu_hb->add_child(memnew(VSeparator));
