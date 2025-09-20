@@ -1184,6 +1184,13 @@ void FindInFilesPanel::update_matches_text() {
 	}
 
 	_status_label->set_text(results_text);
+
+	TreeItem *file_item = _results_display->get_root()->get_first_child();
+	while (file_item) {
+		const int file_matches_count = file_item->get_child_count();
+		file_item->set_text(0, (String)file_item->get_metadata(0) + " (" + vformat(TTRN("%d match", "%d matches", file_matches_count), file_matches_count) + ")");
+		file_item = file_item->get_next();
+	}
 }
 
 void FindInFilesPanel::_bind_methods() {
