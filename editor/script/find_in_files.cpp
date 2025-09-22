@@ -35,6 +35,7 @@
 #include "core/os/os.h"
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
+#include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/button.h"
@@ -43,6 +44,7 @@
 #include "scene/gui/grid_container.h"
 #include "scene/gui/label.h"
 #include "scene/gui/line_edit.h"
+#include "scene/gui/menu_button.h"
 #include "scene/gui/progress_bar.h"
 #include "scene/gui/tree.h"
 
@@ -347,24 +349,50 @@ FindInFilesDialog::FindInFilesDialog() {
 	find_label->set_text(TTRC("Find:"));
 	gc->add_child(find_label);
 
-	_search_text_line_edit = memnew(LineEdit);
-	_search_text_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	_search_text_line_edit->set_accessibility_name(TTRC("Find:"));
-	_search_text_line_edit->connect(SceneStringName(text_changed), callable_mp(this, &FindInFilesDialog::_on_search_text_modified));
-	_search_text_line_edit->connect(SceneStringName(text_submitted), callable_mp(this, &FindInFilesDialog::_on_search_text_submitted));
-	gc->add_child(_search_text_line_edit);
+	{
+		HBoxContainer *_search_text_hb = memnew(HBoxContainer);
+		_search_text_hb->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+		gc->add_child(_search_text_hb);
+
+		_search_text_line_edit = memnew(LineEdit);
+		_search_text_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+		_search_text_line_edit->set_accessibility_name(TTRC("Find:"));
+		_search_text_line_edit->connect(SceneStringName(text_changed), callable_mp(this, &FindInFilesDialog::_on_search_text_modified));
+		_search_text_line_edit->connect(SceneStringName(text_submitted), callable_mp(this, &FindInFilesDialog::_on_search_text_submitted));
+		_search_text_hb->add_child(_search_text_line_edit);
+
+		_search_text_history_button = memnew(MenuButton);
+		_search_text_history_button->set_flat(false);
+		_search_text_history_button->set_tooltip_text(TTRC("Search History"));
+		_search_text_history_button->get_popup()->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+		_search_text_history_button->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &FindInFilesDialog::_set_history_entry).bind(SEARCH_HISTORY));
+		_search_text_hb->add_child(_search_text_history_button);
+	}
 
 	_replace_label = memnew(Label);
 	_replace_label->set_text(TTRC("Replace:"));
 	_replace_label->hide();
 	gc->add_child(_replace_label);
 
-	_replace_text_line_edit = memnew(LineEdit);
-	_replace_text_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	_replace_text_line_edit->set_accessibility_name(TTRC("Replace:"));
-	_replace_text_line_edit->connect(SceneStringName(text_submitted), callable_mp(this, &FindInFilesDialog::_on_replace_text_submitted));
-	_replace_text_line_edit->hide();
-	gc->add_child(_replace_text_line_edit);
+	{
+		_replace_text_hb = memnew(HBoxContainer);
+		_replace_text_hb->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+		_replace_text_hb->hide();
+		gc->add_child(_replace_text_hb);
+
+		_replace_text_line_edit = memnew(LineEdit);
+		_replace_text_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+		_replace_text_line_edit->set_accessibility_name(TTRC("Replace:"));
+		_replace_text_line_edit->connect(SceneStringName(text_submitted), callable_mp(this, &FindInFilesDialog::_on_replace_text_submitted));
+		_replace_text_hb->add_child(_replace_text_line_edit);
+
+		_replace_text_history_button = memnew(MenuButton);
+		_replace_text_history_button->set_flat(false);
+		_replace_text_history_button->set_tooltip_text(TTRC("Replace History"));
+		_replace_text_history_button->get_popup()->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+		_replace_text_history_button->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &FindInFilesDialog::_set_history_entry).bind(REPLACE_HISTORY));
+		_replace_text_hb->add_child(_replace_text_history_button);
+	}
 
 	gc->add_child(memnew(Control)); // Space to maintain the grid alignment.
 
@@ -400,16 +428,22 @@ FindInFilesDialog::FindInFilesDialog() {
 		_folder_line_edit->set_accessibility_name(TTRC("Folder:"));
 		hbc->add_child(_folder_line_edit);
 
-		Button *folder_button = memnew(Button);
-		folder_button->set_accessibility_name(TTRC("Select Folder"));
-		folder_button->set_text("...");
-		folder_button->connect(SceneStringName(pressed), callable_mp(this, &FindInFilesDialog::_on_folder_button_pressed));
-		hbc->add_child(folder_button);
+		_select_folder_button = memnew(Button);
+		_select_folder_button->set_accessibility_name(TTRC("Select Folder"));
+		_select_folder_button->connect(SceneStringName(pressed), callable_mp(this, &FindInFilesDialog::_on_folder_button_pressed));
+		hbc->add_child(_select_folder_button);
 
 		_folder_dialog = memnew(FileDialog);
 		_folder_dialog->set_file_mode(FileDialog::FILE_MODE_OPEN_DIR);
 		_folder_dialog->connect("dir_selected", callable_mp(this, &FindInFilesDialog::_on_folder_selected));
 		add_child(_folder_dialog);
+
+		_select_folder_history_button = memnew(MenuButton);
+		_select_folder_history_button->set_flat(false);
+		_select_folder_history_button->set_tooltip_text(TTRC("Selected Folder History"));
+		_select_folder_history_button->get_popup()->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+		_select_folder_history_button->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &FindInFilesDialog::_set_history_entry).bind(FOLDER_HISTORY));
+		hbc->add_child(_select_folder_history_button);
 
 		gc->add_child(hbc);
 	}
@@ -420,12 +454,25 @@ FindInFilesDialog::FindInFilesDialog() {
 	includes_label->set_mouse_filter(Control::MOUSE_FILTER_PASS);
 	gc->add_child(includes_label);
 
-	_includes_line_edit = memnew(LineEdit);
-	_includes_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	_includes_line_edit->set_placeholder(TTRC("example: scripts,scenes/*/test.gd"));
-	_includes_line_edit->set_accessibility_name(TTRC("Includes:"));
-	_includes_line_edit->connect(SceneStringName(text_submitted), callable_mp(this, &FindInFilesDialog::_on_search_text_submitted));
-	gc->add_child(_includes_line_edit);
+	{
+		HBoxContainer *_includes_hb = memnew(HBoxContainer);
+		gc->add_child(_includes_hb);
+
+		_includes_line_edit = memnew(LineEdit);
+		_includes_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+		_includes_line_edit->set_placeholder(TTRC("example: scripts,scenes/*/test.gd"));
+		_includes_line_edit->set_accessibility_name(TTRC("Includes:"));
+		_includes_line_edit->set_clear_button_enabled(true);
+		_includes_line_edit->connect(SceneStringName(text_submitted), callable_mp(this, &FindInFilesDialog::_on_search_text_submitted));
+		_includes_hb->add_child(_includes_line_edit);
+
+		_includes_history_button = memnew(MenuButton);
+		_includes_history_button->set_flat(false);
+		_includes_history_button->set_tooltip_text(TTRC("Includes History"));
+		_includes_history_button->get_popup()->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+		_includes_history_button->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &FindInFilesDialog::_set_history_entry).bind(INCLUDES_HISTORY));
+		_includes_hb->add_child(_includes_history_button);
+	}
 
 	Label *excludes_label = memnew(Label);
 	excludes_label->set_text(TTRC("Excludes:"));
@@ -433,12 +480,25 @@ FindInFilesDialog::FindInFilesDialog() {
 	excludes_label->set_mouse_filter(Control::MOUSE_FILTER_PASS);
 	gc->add_child(excludes_label);
 
-	_excludes_line_edit = memnew(LineEdit);
-	_excludes_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	_excludes_line_edit->set_placeholder(TTRC("example: res://addons,scenes/test/*.gd"));
-	_excludes_line_edit->set_accessibility_name(TTRC("Excludes:"));
-	_excludes_line_edit->connect(SceneStringName(text_submitted), callable_mp(this, &FindInFilesDialog::_on_search_text_submitted));
-	gc->add_child(_excludes_line_edit);
+	{
+		HBoxContainer *_excludes_hb = memnew(HBoxContainer);
+		gc->add_child(_excludes_hb);
+
+		_excludes_line_edit = memnew(LineEdit);
+		_excludes_line_edit->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+		_excludes_line_edit->set_placeholder(TTRC("example: res://addons,scenes/test/*.gd"));
+		_excludes_line_edit->set_accessibility_name(TTRC("Excludes:"));
+		_excludes_line_edit->set_clear_button_enabled(true);
+		_excludes_line_edit->connect(SceneStringName(text_submitted), callable_mp(this, &FindInFilesDialog::_on_search_text_submitted));
+		_excludes_hb->add_child(_excludes_line_edit);
+
+		_excludes_history_button = memnew(MenuButton);
+		_excludes_history_button->set_flat(false);
+		_excludes_history_button->set_tooltip_text(TTRC("Excludes History"));
+		_excludes_history_button->get_popup()->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+		_excludes_history_button->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &FindInFilesDialog::_set_history_entry).bind(EXCLUDES_HISTORY));
+		_excludes_hb->add_child(_excludes_history_button);
+	}
 
 	Label *filter_label = memnew(Label);
 	filter_label->set_text(TTRC("Filters:"));
@@ -496,11 +556,11 @@ void FindInFilesDialog::set_find_in_files_mode(FindInFilesMode p_mode) {
 	if (p_mode == SEARCH_MODE) {
 		set_title(TTRC("Find in Files"));
 		_replace_label->hide();
-		_replace_text_line_edit->hide();
+		_replace_text_hb->hide();
 	} else if (p_mode == REPLACE_MODE) {
 		set_title(TTRC("Replace in Files"));
 		_replace_label->show();
-		_replace_text_line_edit->show();
+		_replace_text_hb->show();
 	}
 
 	// Recalculate the dialog size after hiding child controls.
@@ -588,7 +648,16 @@ void FindInFilesDialog::_notification(int p_what) {
 					cb->set_pressed(_filters_preferences[exts[i]]);
 					_filters_container->add_child(cb);
 				}
+				_set_history_lists();
 			}
+		} break;
+		case NOTIFICATION_THEME_CHANGED: {
+			_select_folder_button->set_button_icon(get_editor_theme_icon(SNAME("FolderBrowse")));
+			_search_text_history_button->set_button_icon(get_editor_theme_icon(SNAME("GuiOptionArrow")));
+			_replace_text_history_button->set_button_icon(get_editor_theme_icon(SNAME("GuiOptionArrow")));
+			_select_folder_history_button->set_button_icon(get_editor_theme_icon(SNAME("GuiOptionArrow")));
+			_includes_history_button->set_button_icon(get_editor_theme_icon(SNAME("GuiOptionArrow")));
+			_excludes_history_button->set_button_icon(get_editor_theme_icon(SNAME("GuiOptionArrow")));
 		} break;
 	}
 }
@@ -604,9 +673,11 @@ void FindInFilesDialog::custom_action(const String &p_action) {
 	}
 
 	if (p_action == "find") {
+		_update_history();
 		emit_signal(SNAME(SIGNAL_FIND_REQUESTED));
 		hide();
 	} else if (p_action == "replace") {
+		_update_history();
 		emit_signal(SNAME(SIGNAL_REPLACE_REQUESTED));
 		hide();
 	}
@@ -650,6 +721,73 @@ void FindInFilesDialog::_on_folder_selected(String path) {
 		path = path.substr(i + 3);
 	}
 	_folder_line_edit->set_text(path);
+}
+
+const String metadata_names[] = { "search_history", "replace_history", "folder_history", "includes_history", "excludes_history" };
+
+void FindInFilesDialog::_set_history_lists() {
+	MenuButton *buttons[] = {
+		_search_text_history_button,
+		_replace_text_history_button,
+		_select_folder_history_button,
+		_includes_history_button,
+		_excludes_history_button
+	};
+	for (int i = 0; i < 5; i++) {
+		Array entries = EditorSettings::get_singleton()->get_project_metadata("find_in_files", metadata_names[i], Array());
+		if (entries.is_empty()) {
+			buttons[i]->set_disabled(true);
+		} else {
+			buttons[i]->set_disabled(false);
+			PopupMenu *menu = buttons[i]->get_popup();
+			menu->clear();
+			for (int j = 0; j < entries.size(); j++) {
+				menu->add_item(entries[j], j);
+			}
+		}
+	}
+}
+
+void FindInFilesDialog::_set_history_entry(int p_history_entry_index, int p_history_type) {
+	MenuButton *buttons[] = {
+		_search_text_history_button,
+		_replace_text_history_button,
+		_select_folder_history_button,
+		_includes_history_button,
+		_excludes_history_button
+	};
+	LineEdit *fields[] = {
+		_search_text_line_edit,
+		_replace_text_line_edit,
+		_folder_line_edit,
+		_includes_line_edit,
+		_excludes_line_edit
+	};
+	fields[p_history_type]->set_text(buttons[p_history_type]->get_popup()->get_item_text(p_history_entry_index));
+}
+
+void FindInFilesDialog::_update_history() {
+	LineEdit *fields[] = {
+		_search_text_line_edit,
+		_replace_text_line_edit,
+		_folder_line_edit,
+		_includes_line_edit,
+		_excludes_line_edit
+	};
+	for (int i = 0; i < 5; i++) {
+		Array entries = EditorSettings::get_singleton()->get_project_metadata("find_in_files", metadata_names[i], Array());
+		const String field_text = fields[i]->get_text();
+		if (!field_text.is_empty()) {
+			if (entries.has(field_text)) {
+				entries.erase(field_text);
+			}
+			entries.push_front(field_text);
+			if (entries.size() > 10) {
+				entries.resize(10);
+			}
+			EditorSettings::get_singleton()->set_project_metadata("find_in_files", metadata_names[i], entries);
+		}
+	}
 }
 
 String FindInFilesDialog::validate_filter_wildcard(const String &p_expression) const {

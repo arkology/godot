@@ -92,6 +92,7 @@ private:
 };
 
 class LineEdit;
+class MenuButton;
 class CheckBox;
 class FileDialog;
 class HBoxContainer;
@@ -133,21 +134,37 @@ protected:
 	static void _bind_methods();
 
 private:
+	enum FindInFilesHistory {
+		SEARCH_HISTORY,
+		REPLACE_HISTORY,
+		FOLDER_HISTORY,
+		INCLUDES_HISTORY,
+		EXCLUDES_HISTORY,
+	};
+
 	void _on_folder_button_pressed();
 	void _on_folder_selected(String path);
 	void _on_search_text_modified(const String &text);
 	void _on_search_text_submitted(const String &text);
 	void _on_replace_text_submitted(const String &text);
+	void _set_history_lists();
+	void _set_history_entry(int p_history_entry_index, int p_history_type);
+	void _update_history();
 
 	String validate_filter_wildcard(const String &p_expression) const;
 
 	FindInFilesMode _mode;
 	LineEdit *_search_text_line_edit = nullptr;
+	MenuButton *_search_text_history_button = nullptr;
 
+	HBoxContainer *_replace_text_hb = nullptr;
 	Label *_replace_label = nullptr;
 	LineEdit *_replace_text_line_edit = nullptr;
+	MenuButton *_replace_text_history_button = nullptr;
 
 	LineEdit *_folder_line_edit = nullptr;
+	Button *_select_folder_button = nullptr;
+	MenuButton *_select_folder_history_button = nullptr;
 	CheckBox *_match_case_checkbox = nullptr;
 	CheckBox *_whole_words_checkbox = nullptr;
 	Button *_find_button = nullptr;
@@ -155,7 +172,9 @@ private:
 	FileDialog *_folder_dialog = nullptr;
 	HBoxContainer *_filters_container = nullptr;
 	LineEdit *_includes_line_edit = nullptr;
+	MenuButton *_includes_history_button = nullptr;
 	LineEdit *_excludes_line_edit = nullptr;
+	MenuButton *_excludes_history_button = nullptr;
 
 	HashMap<String, bool> _filters_preferences;
 };
