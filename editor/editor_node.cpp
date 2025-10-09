@@ -8152,6 +8152,7 @@ EditorNode::EditorNode() {
 	recent_scenes->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
 	file_menu->add_submenu_node_item(TTRC("Open Recent"), recent_scenes, SCENE_OPEN_RECENT);
 	recent_scenes->connect(SceneStringName(id_pressed), callable_mp(this, &EditorNode::_open_recent_scene));
+	scene_tabs->set_recent_scenes_popup(recent_scenes);
 
 	file_menu->add_separator();
 	file_menu->add_shortcut(ED_SHORTCUT_AND_COMMAND("editor/save_scene", TTRC("Save Scene"), KeyModifierMask::CMD_OR_CTRL + Key::S), SCENE_SAVE_SCENE);

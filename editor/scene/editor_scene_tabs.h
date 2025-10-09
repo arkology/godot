@@ -59,6 +59,7 @@ private:
 
 	TabBar *scene_tabs = nullptr;
 	PopupMenu *scene_tabs_context_menu = nullptr;
+	PopupMenu *scene_tabs_context_menu_recent_scenes = nullptr;
 	Button *scene_tab_add = nullptr;
 	Control *scene_tab_add_ph = nullptr;
 
@@ -99,6 +100,8 @@ public:
 
 	void set_current_tab(int p_tab);
 	int get_current_tab() const;
+
+	void set_recent_scenes_popup(PopupMenu *p_popup);
 
 	void update_scene_tabs();
 
