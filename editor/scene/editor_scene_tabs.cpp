@@ -214,6 +214,7 @@ void EditorSceneTabs::_update_context_menu() {
 		const PackedStringArray paths = { EditorNode::get_editor_data().get_scene_path(tab_id) };
 		EditorContextMenuPluginManager::get_singleton()->add_options_from_plugins(scene_tabs_context_menu, EditorContextMenuPlugin::CONTEXT_SLOT_SCENE_TABS, paths);
 	} else {
+		scene_tabs_context_menu->add_submenu_node_item(TTRC("Open Recent"), scene_tabs_context_menu_recent_scenes, SCENE_SHOW_IN_FILESYSTEM);
 		EditorContextMenuPluginManager::get_singleton()->add_options_from_plugins(scene_tabs_context_menu, EditorContextMenuPlugin::CONTEXT_SLOT_SCENE_TABS, {});
 	}
 #undef DISABLE_LAST_OPTION_IF
@@ -390,6 +391,10 @@ void EditorSceneTabs::set_current_tab(int p_tab) {
 
 int EditorSceneTabs::get_current_tab() const {
 	return scene_tabs->get_current_tab();
+}
+
+void EditorSceneTabs::set_recent_scenes_popup(PopupMenu *p_popup) {
+	scene_tabs_context_menu_recent_scenes = p_popup;
 }
 
 void EditorSceneTabs::_bind_methods() {
