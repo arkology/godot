@@ -1115,6 +1115,11 @@ EditorAudioBuses *EditorAudioBuses::register_editor() {
 	return audio_buses;
 }
 
+
+void EditorAudioBuses::_dock_split_dragged(int p_offset) {
+	dock_dragged = true;
+}
+
 void EditorAudioBuses::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
@@ -1153,20 +1158,41 @@ void EditorAudioBuses::_notification(int p_what) {
 			}
 		} break;
 		case NOTIFICATION_VISIBILITY_CHANGED: {
-			if (!is_visible()) {
-				break;
+			// if (!is_inside_tree() || !is_ready()) {
+			// 	return;
+			// }
+
+			if (is_visible()) {
+				_update_file_label_size();
 			}
 
-			_update_file_label_size();
-
-			// Setting `the split_offset` value once to the minimum value required to display the entire contents of the `EditorAudioBuses`.
-			// This is used instead of setting a custom_minimum_size or similar, as this may cause the panel to be outside the window (see GH-26835).
-			// If `EditorAudioBuses` is selected when starting the editor, this code will be executed first and then the saved layout will load.
-			if (use_default_editor_size) {
-				use_default_editor_size = false;
-				int offset = EditorNode::get_bottom_panel()->get_combined_minimum_size().y + get_combined_minimum_size().y;
+			if (is_visible_in_tree()) {
+				int offset = get_combined_minimum_size().y;// + EditorNode::get_bottom_panel()->get_combined_minimum_size().y;
 				offset += Object::cast_to<Control>(bus_hb->get_child(0))->get_combined_minimum_size().y; // Master audio bus always exists.
-				EditorNode::get_singleton()->set_center_split_offset(-offset);
+				print_line(offset);
+				if (EditorNode::get_singleton()->get_center_split_offset() == 0 || (use_default_editor_size && EditorNode::get_singleton()->get_center_split_offset() < offset)) {
+					set_meta("_split_offset", EditorNode::get_singleton()->get_center_split_offset());
+					EditorNode::get_singleton()->set_center_split_offset(-offset);
+
+					SplitContainer *center_split = Object::cast_to<SplitContainer>(get_parent()->get_parent());
+					ERR_FAIL_NULL(center_split);
+					center_split->connect("dragged", callable_mp(this, &EditorAudioBuses::_dock_split_dragged));
+				}
+			} else {
+				if (has_meta("_split_offset")) {
+					if (dock_dragged) {
+						dock_dragged = false;
+						return;
+					}
+					int previous_offset = get_meta("_split_offset");
+					EditorNode::get_singleton()->set_center_split_offset(previous_offset);
+
+					use_default_editor_size = false;
+					remove_meta("_split_offset");
+					SplitContainer *center_split = Object::cast_to<SplitContainer>(get_parent()->get_parent());
+					ERR_FAIL_NULL(center_split);
+					center_split->disconnect("dragged", callable_mp(this, &EditorAudioBuses::_dock_split_dragged));
+				}
 			}
 		} break;
 	}

@@ -191,10 +191,13 @@ class EditorAudioBuses : public VBoxContainer {
 	void _load_default_layout();
 	void _new_layout();
 
+	void _dock_split_dragged(int p_offset);
+
 	EditorFileDialog *file_dialog = nullptr;
 	bool new_layout = false;
 
 	bool use_default_editor_size = true;
+	bool dock_dragged = false;
 
 	void _file_dialog_callback(const String &p_string);
 

@@ -6034,7 +6034,7 @@ void EditorNode::_load_central_editor_layout_from_config(Ref<ConfigFile> p_confi
 
 	if (p_config_file->has_section_key(EDITOR_NODE_CONFIG_SECTION, "center_split_offset")) {
 		int center_split_offset = p_config_file->get_value(EDITOR_NODE_CONFIG_SECTION, "center_split_offset");
-		center_split->set_split_offset(center_split_offset);
+		callable_mp(this, &EditorNode::set_center_split_offset).call_deferred(center_split_offset);
 	}
 
 	// Debugger tab.
@@ -6534,6 +6534,10 @@ bool EditorNode::is_distraction_free_mode_enabled() const {
 
 void EditorNode::set_center_split_offset(int p_offset) {
 	center_split->set_split_offset(p_offset);
+}
+
+int EditorNode::get_center_split_offset(void) const {
+	return center_split->get_split_offset();
 }
 
 Dictionary EditorNode::drag_resource(const Ref<Resource> &p_res, Control *p_from) {
