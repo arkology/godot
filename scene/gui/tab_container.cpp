@@ -235,8 +235,16 @@ void TabContainer::_notification(int p_what) {
 			// Otherwise, it can prevent a tab change done right before this container was made visible.
 			Vector<Control *> controls = _get_tab_controls();
 			int current = setup_current_tab > -2 ? setup_current_tab : get_current_tab();
+			bool has_valid_current = false;
 			for (int i = 0; i < controls.size(); i++) {
-				controls[i]->set_visible(i == current);
+				if (i == current) {
+					has_valid_current = true;
+					continue;
+				}
+				controls[i]->set_visible(false);
+			}
+			if (has_valid_current) {
+				controls[current]->set_visible(true);
 			}
 
 			updating_visibility = false;
@@ -321,29 +329,37 @@ void TabContainer::_repaint() {
 	}
 
 	updating_visibility = true;
+	bool has_valid_current = false;
 	for (int i = 0; i < controls.size(); i++) {
 		Control *c = controls[i];
 
 		if (i == current) {
-			c->show();
-			c->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
-
-			if (tabs_visible) {
-				if (tabs_position == POSITION_BOTTOM) {
-					c->set_offset(SIDE_BOTTOM, -_get_tab_height());
-				} else {
-					c->set_offset(SIDE_TOP, _get_tab_height());
-				}
-			}
-
-			c->set_offset(SIDE_TOP, c->get_offset(SIDE_TOP) + theme_cache.panel_style->get_margin(SIDE_TOP));
-			c->set_offset(SIDE_LEFT, c->get_offset(SIDE_LEFT) + theme_cache.panel_style->get_margin(SIDE_LEFT));
-			c->set_offset(SIDE_RIGHT, c->get_offset(SIDE_RIGHT) - theme_cache.panel_style->get_margin(SIDE_RIGHT));
-			c->set_offset(SIDE_BOTTOM, c->get_offset(SIDE_BOTTOM) - theme_cache.panel_style->get_margin(SIDE_BOTTOM));
-		} else {
-			c->hide();
+			has_valid_current = true;
+			continue;
 		}
+
+		c->hide();
 	}
+
+	if (has_valid_current) {
+		Control *c = controls[current];
+		c->show();
+		c->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+
+		if (tabs_visible) {
+			if (tabs_position == POSITION_BOTTOM) {
+				c->set_offset(SIDE_BOTTOM, -_get_tab_height());
+			} else {
+				c->set_offset(SIDE_TOP, _get_tab_height());
+			}
+		}
+
+		c->set_offset(SIDE_TOP, c->get_offset(SIDE_TOP) + theme_cache.panel_style->get_margin(SIDE_TOP));
+		c->set_offset(SIDE_LEFT, c->get_offset(SIDE_LEFT) + theme_cache.panel_style->get_margin(SIDE_LEFT));
+		c->set_offset(SIDE_RIGHT, c->get_offset(SIDE_RIGHT) - theme_cache.panel_style->get_margin(SIDE_RIGHT));
+		c->set_offset(SIDE_BOTTOM, c->get_offset(SIDE_BOTTOM) - theme_cache.panel_style->get_margin(SIDE_BOTTOM));
+	}
+
 	updating_visibility = false;
 
 	update_minimum_size();
