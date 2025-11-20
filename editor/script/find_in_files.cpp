@@ -1331,7 +1331,7 @@ FindInFilesPanel *FindInFilesContainer::_get_current_panel() {
 	return Object::cast_to<FindInFilesPanel>(_tabs->get_current_tab_control());
 }
 
-FindInFilesPanel *FindInFilesContainer::get_panel_for_results(const String &p_label) {
+FindInFilesPanel *FindInFilesContainer::get_panel_for_results(FindInFilesMode p_mode, const String &p_label) {
 	FindInFilesPanel *panel = nullptr;
 	// Prefer the current panel.
 	if (_get_current_panel() && !_get_current_panel()->is_keep_results()) {
@@ -1351,6 +1351,7 @@ FindInFilesPanel *FindInFilesContainer::get_panel_for_results(const String &p_la
 			panel = _create_new_panel();
 		}
 	}
+	panel->set_meta("_");
 	_tabs->set_tab_title(_tabs->get_current_tab(), p_label);
 	return panel;
 }
@@ -1365,6 +1366,29 @@ void FindInFilesContainer::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("files_modified", PropertyInfo(Variant::STRING, "paths")));
 
 	ADD_SIGNAL(MethodInfo("close_button_clicked"));
+}
+
+void FindInFilesContainer::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_TRANSLATION_CHANGED: {
+			for (int i = 0; i < _tabs->get_tab_count(); i++) {
+				FindInFilesPanel *p = Object::cast_to<FindInFilesPanel>(_tabs->get_tab_control(i));
+				_tabs->set_tab_title(i, p_label);
+			}
+		} break;
+	}
+}
+
+void FindInFilesContainer::_on_theme_changed() {
+	const Ref<StyleBox> bottom_panel_style = EditorNode::get_singleton()->get_editor_theme()->get_stylebox(SNAME("BottomPanel"), EditorStringName(EditorStyles));
+	if (bottom_panel_style.is_valid()) {
+		begin_bulk_theme_override();
+		add_theme_constant_override("margin_top", -bottom_panel_style->get_margin(SIDE_TOP));
+		add_theme_constant_override("margin_left", -bottom_panel_style->get_margin(SIDE_LEFT));
+		add_theme_constant_override("margin_right", -bottom_panel_style->get_margin(SIDE_RIGHT));
+		add_theme_constant_override("margin_bottom", -bottom_panel_style->get_margin(SIDE_BOTTOM));
+		end_bulk_theme_override();
+	}
 }
 
 void FindInFilesContainer::_on_theme_changed() {

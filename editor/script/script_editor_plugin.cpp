@@ -4084,7 +4084,7 @@ void ScriptEditor::_on_find_in_files_result_selected(const String &fpath, int li
 }
 
 void ScriptEditor::_start_find_in_files(bool with_replace) {
-	FindInFilesPanel *panel = find_in_files->get_panel_for_results(with_replace ? TTR("Replace:") + " " + find_in_files_dialog->get_search_text() : TTR("Find:") + " " + find_in_files_dialog->get_search_text());
+	FindInFilesPanel *panel = find_in_files->get_panel_for_results(with_replace ? FindInFilesDialog::REPLACE_MODE : FindInFilesDialog::SEARCH_MODE, find_in_files_dialog->get_search_text());
 	FindInFiles *f = panel->get_finder();
 
 	f->set_search_text(find_in_files_dialog->get_search_text());
