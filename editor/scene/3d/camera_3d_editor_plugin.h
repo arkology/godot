@@ -33,8 +33,11 @@
 #include "editor/plugins/editor_plugin.h"
 #include "editor/scene/texture/texture_editor_plugin.h"
 
+class AspectRatioContainer;
 class Camera3D;
+class MarginContainer;
 class SubViewport;
+class SubViewportContainer;
 
 class Camera3DEditor : public Control {
 	GDCLASS(Camera3DEditor, Control);
@@ -53,13 +56,56 @@ public:
 	Camera3DEditor();
 };
 
-class Camera3DPreview : public TexturePreview {
-	GDCLASS(Camera3DPreview, TexturePreview);
+//class TexturePreview : public MarginContainer {
+//	GDCLASS(TexturePreview, MarginContainer);
+//
+//private:
+//	struct ThemeCache {
+//		Color outline_color;
+//	} theme_cache;
+//
+//	TextureRect *texture_display = nullptr;
+//
+//	MarginContainer *margin_container = nullptr;
+//	Control *outline_overlay = nullptr;
+//	AspectRatioContainer *centering_container = nullptr;
+//	ColorRect *bg_rect = nullptr;
+//	TextureRect *checkerboard = nullptr;
+//	Label *metadata_label = nullptr;
+//
+//	static inline Ref<ShaderMaterial> texture_material;
+//
+//	ColorChannelSelector *channel_selector = nullptr;
+//
+//	void _draw_outline();
+//	void _update_metadata_label_text();
+//
+//protected:
+//	void _notification(int p_what);
+//	void _update_texture_display_ratio();
+//
+//	void on_selected_channels_changed();
+//
+//public:
+//	static void init_shaders();
+//	static void finish_shaders();
+//
+//	TextureRect *get_texture_display();
+//	TexturePreview(Ref<Texture2D> p_texture, bool p_show_metadata);
+//};
+
+class Camera3DPreview : public MarginContainer {
+	GDCLASS(Camera3DPreview, MarginContainer);
 
 	Camera3D *camera = nullptr;
+	AspectRatioContainer *centering_container = nullptr;
+	SubViewportContainer *sub_viewport_container = nullptr;
 	SubViewport *sub_viewport = nullptr;
 
+	static bool camera_preview_enabled;
+
 	void _update_sub_viewport_size();
+	void _camera_exiting();
 
 public:
 	Camera3DPreview(Camera3D *p_camera);
