@@ -396,8 +396,11 @@ ProjectListItemControl::ProjectListItemControl() {
 		project_title->set_clip_text(true);
 		title_hb->add_child(project_title);
 
+		ScrollContainer *tag_scroll_container = memnew(ScrollContainer);
+		tag_scroll_container->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+		title_hb->add_child(tag_scroll_container);
 		tag_container = memnew(HBoxContainer);
-		title_hb->add_child(tag_container);
+		tag_scroll_container->add_child(tag_container);
 
 		Control *spacer = memnew(Control);
 		spacer->set_custom_minimum_size(Size2(10, 10));
