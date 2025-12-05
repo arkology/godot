@@ -65,9 +65,10 @@ void EditorBottomPanel::_on_tab_changed(int p_idx) {
 
 void EditorBottomPanel::_theme_changed() {
 	// Add margin to make space for the right side buttons.
-	icon_spacer->set_custom_minimum_size(Vector2(get_theme_constant("class_icon_size", EditorStringName(Editor)), 0));
+	const int icon_spacer_width = get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor));
+	icon_spacer->set_custom_minimum_size(Vector2(icon_spacer_width, 0));
 	Ref<StyleBox> bottom_tabbar_style = EditorNode::get_singleton()->get_editor_theme()->get_stylebox("tabbar_background", "BottomPanel")->duplicate();
-	bottom_tabbar_style->set_content_margin(SIDE_RIGHT, bottom_hbox->get_minimum_size().x + bottom_tabbar_style->get_content_margin(SIDE_LEFT));
+	bottom_tabbar_style->set_content_margin(is_layout_rtl() ? SIDE_LEFT : SIDE_RIGHT, bottom_hbox->get_minimum_size().x + bottom_tabbar_style->get_content_margin(!is_layout_rtl() ? SIDE_LEFT : SIDE_RIGHT) - icon_spacer_width);
 	add_theme_style_override("tabbar_background", bottom_tabbar_style);
 
 	if (get_current_tab() == -1) {
