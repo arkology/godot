@@ -36,9 +36,11 @@
 #include "scene/gui/button.h"
 #include "scene/gui/check_box.h"
 #include "scene/gui/line_edit.h"
+#include "scene/gui/menu_button.h"
 
 void EditorExpressionEvaluator::on_start() {
 	expression_input->set_editable(false);
+	expression_history_button->set_disabled(true);
 	evaluate_btn->set_disabled(true);
 
 	if (clear_on_run_checkbox->is_pressed()) {
@@ -91,6 +93,15 @@ void EditorExpressionEvaluator::_line_edit_gui_input(const Ref<InputEvent> &p_ev
 	}
 }
 
+void EditorExpressionEvaluator::_set_history_entry(int p_history_entry_index) {
+	if (!editor_debugger->is_session_active()) {
+		return;
+	}
+
+	expression_input->set_text(expression_history_button->get_popup()->get_item_text(p_history_entry_index));
+	//_on_expression_input_changed();
+}
+
 void EditorExpressionEvaluator::_evaluate() {
 	const String &expression = expression_input->get_text();
 	if (expression.is_empty()) {
@@ -104,6 +115,15 @@ void EditorExpressionEvaluator::_evaluate() {
 	expression_history.erase(expression);
 	expression_history.push_back(expression);
 	expression_index = -1;
+
+	expression_history_button->set_disabled(false);
+	PopupMenu *menu = expression_history_button->get_popup();
+	const int expression_id = menu->get_item_idx_from_text(expression);
+	if (expression_id != -1) {
+		menu->remove_item(expression_id);
+	}
+	menu->add_item(expression, -1);
+	menu->set_focused_item(-1);
 
 	editor_debugger->request_remote_evaluate(expression, editor_debugger->get_stack_script_frame());
 
@@ -125,11 +145,13 @@ void EditorExpressionEvaluator::_on_expression_input_changed(const String &p_exp
 
 void EditorExpressionEvaluator::_on_debugger_breaked(bool p_breaked, bool p_can_debug) {
 	expression_input->set_editable(p_breaked);
+	expression_history_button->set_disabled(!p_breaked || expression_history.is_empty());
 	evaluate_btn->set_disabled(!p_breaked);
 }
 
 void EditorExpressionEvaluator::_on_debugger_clear_execution(Ref<Script> p_stack_script) {
 	expression_input->set_editable(false);
+	expression_history_button->set_disabled(true);
 	evaluate_btn->set_disabled(true);
 }
 
@@ -142,6 +164,7 @@ void EditorExpressionEvaluator::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 			expression_input->add_theme_font_override(SceneStringName(font), get_theme_font(SNAME("expression"), EditorStringName(EditorFonts)));
 			expression_input->add_theme_font_size_override(SceneStringName(font_size), get_theme_font_size(SNAME("expression_size"), EditorStringName(EditorFonts)));
+			expression_history_button->set_button_icon(get_editor_theme_icon(SNAME("GuiOptionArrow")));
 		} break;
 	}
 }
@@ -162,6 +185,12 @@ EditorExpressionEvaluator::EditorExpressionEvaluator() {
 	expression_input->connect(SceneStringName(text_submitted), callable_mp(this, &EditorExpressionEvaluator::_evaluate).unbind(1));
 	expression_input->connect(SceneStringName(text_changed), callable_mp(this, &EditorExpressionEvaluator::_on_expression_input_changed));
 	hb->add_child(expression_input);
+
+	expression_history_button = memnew(MenuButton);
+	expression_history_button->set_tooltip_text(TTRC("Expression History"));
+	expression_history_button->get_popup()->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+	expression_history_button->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &EditorExpressionEvaluator::_set_history_entry));
+	hb->add_child(expression_history_button);
 
 	clear_on_run_checkbox = memnew(CheckBox);
 	clear_on_run_checkbox->set_h_size_flags(Control::SIZE_SHRINK_CENTER);
@@ -190,5 +219,6 @@ EditorExpressionEvaluator::EditorExpressionEvaluator() {
 	add_child(inspector);
 
 	expression_input->set_editable(false);
+	expression_history_button->set_disabled(true);
 	evaluate_btn->set_disabled(true);
 }
