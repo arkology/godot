@@ -36,6 +36,7 @@ class Button;
 class CheckBox;
 class EditorDebuggerInspector;
 class LineEdit;
+class MenuButton;
 class ScriptEditorDebugger;
 
 class EditorExpressionEvaluator : public VBoxContainer {
@@ -43,6 +44,7 @@ class EditorExpressionEvaluator : public VBoxContainer {
 
 private:
 	LineEdit *expression_input = nullptr;
+	MenuButton *expression_history_button = nullptr;
 	CheckBox *clear_on_run_checkbox = nullptr;
 	Button *evaluate_btn = nullptr;
 	Button *clear_btn = nullptr;
@@ -53,6 +55,7 @@ private:
 	int expression_index = -1;
 
 	void _line_edit_gui_input(const Ref<InputEvent> &p_event);
+	void _set_history_entry(int p_history_entry_index);
 	void _evaluate();
 	void _clear();
 
