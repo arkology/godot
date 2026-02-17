@@ -152,6 +152,16 @@ void FindReplaceBar::_notification(int p_what) {
 			if (matches_label->is_visible()) {
 				_update_matches_display();
 			}
+
+			find_next->set_tooltip_text(TTR("Next Match") + "\n" +
+					// TRANSLATORS: The placeholders are keyboard shortcuts.
+					vformat(TTR("(\"%s\" in find field, or %s)"), Shortcut::make_from_action("ui_text_submit")->get_as_text(), ED_GET_SHORTCUT("script_text_editor/find_next")->get_as_text()));
+			find_prev->set_tooltip_text(TTR("Previous Match") + "\n" +
+					// TRANSLATORS: The placeholders are keyboard shortcuts.
+					vformat(TTR("(\"%s\" in find field + %s, or %s)"), Shortcut::make_from_action("ui_text_submit")->get_as_text(), keycode_get_string(Key::SHIFT), ED_GET_SHORTCUT("script_text_editor/find_previous")->get_as_text()));
+
+			hide_button->set_tooltip_text(TTR("Hide") + "\n(" + Shortcut::make_from_action("ui_cancel")->get_as_text() + ")");
+
 			[[fallthrough]];
 		}
 		case NOTIFICATION_LAYOUT_DIRECTION_CHANGED: {
@@ -803,7 +813,6 @@ FindReplaceBar::FindReplaceBar() {
 	find_prev = memnew(Button);
 	find_prev->set_theme_type_variation(SceneStringName(FlatButton));
 	find_prev->set_disabled(results_count < 1);
-	find_prev->set_tooltip_text(TTRC("Previous Match"));
 	hbc_button_search->add_child(find_prev);
 	find_prev->set_focus_mode(FOCUS_ACCESSIBILITY);
 	find_prev->connect(SceneStringName(pressed), callable_mp(this, &FindReplaceBar::search_prev));
@@ -811,7 +820,6 @@ FindReplaceBar::FindReplaceBar() {
 	find_next = memnew(Button);
 	find_next->set_theme_type_variation(SceneStringName(FlatButton));
 	find_next->set_disabled(results_count < 1);
-	find_next->set_tooltip_text(TTRC("Next Match"));
 	hbc_button_search->add_child(find_next);
 	find_next->set_focus_mode(FOCUS_ACCESSIBILITY);
 	find_next->connect(SceneStringName(pressed), callable_mp(this, &FindReplaceBar::search_next));
@@ -819,13 +827,21 @@ FindReplaceBar::FindReplaceBar() {
 	case_sensitive = memnew(CheckBox);
 	hbc_option_search->add_child(case_sensitive);
 	case_sensitive->set_text(TTRC("Match Case"));
+	case_sensitive->set_tooltip_text(TTRC("Match Case"));
 	case_sensitive->set_focus_mode(FOCUS_ACCESSIBILITY);
+	case_sensitive->set_shortcut(ED_SHORTCUT("script_editor/find_replace_bar/match_case", TTRC("Match Case"), KeyModifierMask::ALT | Key::C));
+	case_sensitive->set_shortcut_context(this);
+	case_sensitive->set_shortcut_in_tooltip(true);
 	case_sensitive->connect(SceneStringName(toggled), callable_mp(this, &FindReplaceBar::_search_options_changed));
 
 	whole_words = memnew(CheckBox);
 	hbc_option_search->add_child(whole_words);
 	whole_words->set_text(TTRC("Whole Words"));
+	whole_words->set_tooltip_text(TTRC("Whole Words"));
 	whole_words->set_focus_mode(FOCUS_ACCESSIBILITY);
+	whole_words->set_shortcut(ED_SHORTCUT("script_editor/find_replace_bar/whole_words", TTRC("Whole Words"), KeyModifierMask::ALT | Key::W));
+	whole_words->set_shortcut_context(this);
+	whole_words->set_shortcut_in_tooltip(true);
 	whole_words->connect(SceneStringName(toggled), callable_mp(this, &FindReplaceBar::_search_options_changed));
 
 	// Replace toolbar.
@@ -840,22 +856,33 @@ FindReplaceBar::FindReplaceBar() {
 	replace = memnew(Button);
 	hbc_button_replace->add_child(replace);
 	replace->set_text(TTRC("Replace"));
+	replace->set_tooltip_text(TTRC("Replace"));
+	replace->set_shortcut(ED_SHORTCUT("script_editor/find_replace_bar/replace", TTRC("Replace"), KeyModifierMask::ALT | Key::R));
+	replace->set_shortcut_context(this);
+	replace->set_shortcut_in_tooltip(true);
 	replace->connect(SceneStringName(pressed), callable_mp(this, &FindReplaceBar::_replace));
 
 	replace_all = memnew(Button);
 	hbc_button_replace->add_child(replace_all);
 	replace_all->set_text(TTRC("Replace All"));
+	replace_all->set_tooltip_text(TTRC("Replace All"));
+	replace_all->set_shortcut(ED_SHORTCUT("script_editor/find_replace_bar/replace_all", TTRC("Replace All"), KeyModifierMask::ALT | Key::A));
+	replace_all->set_shortcut_context(this);
+	replace_all->set_shortcut_in_tooltip(true);
 	replace_all->connect(SceneStringName(pressed), callable_mp(this, &FindReplaceBar::_replace_all));
 
 	selection_only = memnew(CheckBox);
 	hbc_option_replace->add_child(selection_only);
 	selection_only->set_text(TTRC("Selection Only"));
+	selection_only->set_tooltip_text(TTRC("Selection Only"));
 	selection_only->set_focus_mode(FOCUS_ACCESSIBILITY);
+	selection_only->set_shortcut(ED_SHORTCUT("script_editor/find_replace_bar/selection_only", TTRC("Selection Only"), KeyModifierMask::ALT | Key::S));
+	selection_only->set_shortcut_context(this);
+	selection_only->set_shortcut_in_tooltip(true);
 	selection_only->connect(SceneStringName(toggled), callable_mp(this, &FindReplaceBar::_search_options_changed));
 
 	hide_button = memnew(Button);
 	hide_button->set_theme_type_variation(SceneStringName(FlatButton));
-	hide_button->set_tooltip_text(TTRC("Hide"));
 	hide_button->set_focus_mode(FOCUS_ACCESSIBILITY);
 	hide_button->connect(SceneStringName(pressed), callable_mp(this, &FindReplaceBar::_hide_bar));
 	hide_button->set_v_size_flags(SIZE_SHRINK_CENTER);
