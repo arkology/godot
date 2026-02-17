@@ -152,6 +152,13 @@ void FindReplaceBar::_notification(int p_what) {
 			if (matches_label->is_visible()) {
 				_update_matches_display();
 			}
+
+			find_next->set_tooltip_text(TTR("Next Match") + "\n" +
+					// TRANSLATORS: The placeholder is "ui_text_submit" action shortcut.
+					vformat(TTR("(\"%s\" in find field)"), Shortcut::make_from_action("ui_text_submit")->get_as_text()));
+			find_prev->set_tooltip_text(TTR("Previous Match") + "\n" +
+					// TRANSLATORS: The placeholders are keyboard shortcuts. The first one is "ui_text_submit" action, second is SHIFT.
+					vformat(TTR("(\"%s\" in find field + %s)"), Shortcut::make_from_action("ui_text_submit")->get_as_text(), keycode_get_string(Key::SHIFT)));
 			[[fallthrough]];
 		}
 		case NOTIFICATION_LAYOUT_DIRECTION_CHANGED: {
@@ -185,6 +192,71 @@ void FindReplaceBar::input(const Ref<InputEvent> &p_event) {
 
 		if (text_editor->has_focus() || (focus_owner && is_ancestor_of(focus_owner))) {
 			_hide_bar();
+			accept_event();
+		}
+	}
+}
+
+void FindReplaceBar::_line_edit_gui_input(const Ref<InputEvent> &p_event, bool p_is_replace) {
+	if (!p_is_replace && !search_text->is_editing()) {
+		return;
+	}
+
+	if (p_is_replace && !replace_text->is_editing()) {
+		return;
+	}
+
+	const Ref<InputEventKey> k = p_event;
+	if (k.is_null() || !k->is_pressed()) {
+		return;
+	}
+
+	if (!p_is_replace) {
+		if (k->is_action_pressed("ui_up", true)) {
+			int size = search_history.size();
+			if (search_history_index < size - 1) {
+				search_history_index++;
+
+				const String &history_text = search_history[search_history.size() - search_history_index - 1];
+				search_text->set_text(history_text);
+				search_text->set_caret_column(history_text.size());
+			}
+			accept_event();
+		} else if (k->is_action_pressed("ui_down", true)) {
+			if (search_history_index > 0) {
+				search_history_index--;
+
+				const String &history_text = search_history[search_history.size() - search_history_index - 1];
+				search_text->set_text(history_text);
+				search_text->set_caret_column(history_text.size());
+			} else if (search_history_index == 0) {
+				search_history_index = -1;
+				search_text->clear();
+			}
+			accept_event();
+		}
+	} else {
+		if (k->is_action_pressed("ui_up", true)) {
+			int size = replace_history.size();
+			if (replace_history_index < size - 1) {
+				replace_history_index++;
+
+				const String &history_text = replace_history[replace_history.size() - replace_history_index - 1];
+				replace_text->set_text(history_text);
+				replace_text->set_caret_column(history_text.size());
+			}
+			accept_event();
+		} else if (k->is_action_pressed("ui_down", true)) {
+			if (replace_history_index > 0) {
+				replace_history_index--;
+
+				const String &history_text = replace_history[replace_history.size() - replace_history_index - 1];
+				replace_text->set_text(history_text);
+				replace_text->set_caret_column(history_text.size());
+			} else if (replace_history_index == 0) {
+				replace_history_index = -1;
+				replace_text->clear();
+			}
 			accept_event();
 		}
 	}
@@ -673,10 +745,15 @@ void FindReplaceBar::_search_text_changed(const String &p_text) {
 	results_count = -1;
 	results_count_to_current = -1;
 	needs_to_count_results = true;
+	search_history_index = -1;
 	search_current();
 }
 
 void FindReplaceBar::_search_text_submitted(const String &p_text) {
+	search_history.erase(p_text);
+	search_history.push_back(p_text);
+	search_history_index = -1;
+
 	if (Input::get_singleton()->is_key_pressed(Key::SHIFT)) {
 		search_prev();
 	} else {
@@ -788,12 +865,13 @@ FindReplaceBar::FindReplaceBar() {
 	search_text = memnew(LineEdit);
 	search_text->set_keep_editing_on_text_submit(true);
 	vbc_lineedit->add_child(search_text);
-	search_text->set_placeholder(TTRC("Find"));
-	search_text->set_tooltip_text(TTRC("Find"));
-	search_text->set_accessibility_name(TTRC("Find"));
+	search_text->set_placeholder(TTRC("Find (Up/Down: Navigate history)"));
+	search_text->set_tooltip_text(TTRC("Find (Up/Down: Navigate history)"));
+	search_text->set_accessibility_name(TTRC("Find (Up/Down: Navigate history)"));
 	search_text->set_custom_minimum_size(Size2(100 * EDSCALE, 0));
 	search_text->connect(SceneStringName(text_changed), callable_mp(this, &FindReplaceBar::_search_text_changed));
 	search_text->connect(SceneStringName(text_submitted), callable_mp(this, &FindReplaceBar::_search_text_submitted));
+	search_text->connect(SceneStringName(gui_input), callable_mp(this, &FindReplaceBar::_line_edit_gui_input).bind(false));
 
 	matches_label = memnew(Label);
 	hbc_button_search->add_child(matches_label);
@@ -803,7 +881,6 @@ FindReplaceBar::FindReplaceBar() {
 	find_prev = memnew(Button);
 	find_prev->set_theme_type_variation(SceneStringName(FlatButton));
 	find_prev->set_disabled(results_count < 1);
-	find_prev->set_tooltip_text(TTRC("Previous Match"));
 	hbc_button_search->add_child(find_prev);
 	find_prev->set_focus_mode(FOCUS_ACCESSIBILITY);
 	find_prev->connect(SceneStringName(pressed), callable_mp(this, &FindReplaceBar::search_prev));
@@ -811,7 +888,6 @@ FindReplaceBar::FindReplaceBar() {
 	find_next = memnew(Button);
 	find_next->set_theme_type_variation(SceneStringName(FlatButton));
 	find_next->set_disabled(results_count < 1);
-	find_next->set_tooltip_text(TTRC("Next Match"));
 	hbc_button_search->add_child(find_next);
 	find_next->set_focus_mode(FOCUS_ACCESSIBILITY);
 	find_next->connect(SceneStringName(pressed), callable_mp(this, &FindReplaceBar::search_next));
@@ -831,11 +907,12 @@ FindReplaceBar::FindReplaceBar() {
 	// Replace toolbar.
 	replace_text = memnew(LineEdit);
 	vbc_lineedit->add_child(replace_text);
-	replace_text->set_placeholder(TTRC("Replace"));
-	replace_text->set_tooltip_text(TTRC("Replace"));
-	replace_text->set_accessibility_name(TTRC("Replace"));
+	replace_text->set_placeholder(TTRC("Replace (Up/Down: Navigate history)"));
+	replace_text->set_tooltip_text(TTRC("Replace (Up/Down: Navigate history)"));
+	replace_text->set_accessibility_name(TTRC("Replace (Up/Down: Navigate history)"));
 	replace_text->set_custom_minimum_size(Size2(100 * EDSCALE, 0));
 	replace_text->connect(SceneStringName(text_submitted), callable_mp(this, &FindReplaceBar::_replace_text_submitted));
+	replace_text->connect(SceneStringName(gui_input), callable_mp(this, &FindReplaceBar::_line_edit_gui_input).bind(true));
 
 	replace = memnew(Button);
 	hbc_button_replace->add_child(replace);

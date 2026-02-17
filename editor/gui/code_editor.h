@@ -102,6 +102,13 @@ class FindReplaceBar : public HBoxContainer {
 	bool replace_all_mode = false;
 	bool preserve_cursor = false;
 
+	LocalVector<String> search_history;
+	LocalVector<String> replace_history;
+	int search_history_index = -1;
+	int replace_history_index = -1;
+
+	void _line_edit_gui_input(const Ref<InputEvent> &p_event, bool p_is_replace);
+
 	virtual void input(const Ref<InputEvent> &p_event) override;
 
 	void _get_search_from(int &r_line, int &r_col, SearchMode p_search_mode);
