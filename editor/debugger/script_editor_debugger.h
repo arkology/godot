@@ -384,8 +384,6 @@ public:
 	bool is_skip_breakpoints() const;
 	bool is_ignore_error_breaks() const;
 
-	virtual Size2 get_minimum_size() const override;
-
 	void add_debugger_tab(Control *p_control);
 	void remove_debugger_tab(Control *p_control);
 	int get_current_debugger_tab() const;

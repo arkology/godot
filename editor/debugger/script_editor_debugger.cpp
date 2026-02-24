@@ -331,12 +331,6 @@ void ScriptEditorDebugger::_video_mem_export() {
 	file_dialog->popup_file_dialog();
 }
 
-Size2 ScriptEditorDebugger::get_minimum_size() const {
-	Size2 ms = MarginContainer::get_minimum_size();
-	ms.y = MAX(ms.y, 250 * EDSCALE);
-	return ms;
-}
-
 void ScriptEditorDebugger::_thread_debug_enter(uint64_t p_thread_id) {
 	ERR_FAIL_COND(!threads_debugged.has(p_thread_id));
 	ThreadDebugged &td = threads_debugged[p_thread_id];
