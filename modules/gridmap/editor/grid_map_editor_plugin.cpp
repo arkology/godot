@@ -49,6 +49,7 @@
 #include "scene/3d/camera_3d.h"
 #include "scene/debugger/view_3d_controller.h"
 #include "scene/gui/dialogs.h"
+#include "scene/gui/flow_container.h"
 #include "scene/gui/item_list.h"
 #include "scene/gui/label.h"
 #include "scene/gui/menu_button.h"
@@ -1494,7 +1495,7 @@ GridMapEditor::GridMapEditor() {
 	set_icon_name("GridMapDock");
 	set_dock_shortcut(ED_SHORTCUT_AND_COMMAND("bottom_panels/toggle_grid_map_bottom_panel", TTRC("Toggle GridMap Dock")));
 	set_default_slot(EditorDock::DOCK_SLOT_BOTTOM);
-	set_available_layouts(EditorDock::DOCK_LAYOUT_HORIZONTAL | EditorDock::DOCK_LAYOUT_FLOATING);
+	set_available_layouts(EditorDock::DOCK_LAYOUT_ALL);
 	set_global(false);
 	set_transient(true);
 	set_custom_minimum_size(Size2(0, 200 * EDSCALE));
@@ -1542,12 +1543,12 @@ GridMapEditor::GridMapEditor() {
 	VBoxContainer *main_vb = memnew(VBoxContainer);
 	add_child(main_vb);
 
-	toolbar = memnew(HBoxContainer);
+	FlowContainer *toolbar = memnew(FlowContainer);
 	toolbar->set_h_size_flags(SIZE_EXPAND_FILL);
 	main_vb->add_child(toolbar);
 
-	HBoxContainer *mode_buttons = memnew(HBoxContainer);
-	toolbar->add_child(mode_buttons);
+	HBoxContainer *toolbar_left_container = memnew(HBoxContainer);
+	toolbar->add_child(toolbar_left_container);
 	mode_buttons_group.instantiate();
 
 	viewport_shortcut_buttons.reserve(12);
@@ -1560,10 +1561,10 @@ GridMapEditor::GridMapEditor() {
 	transform_mode_button->set_accessibility_name(TTRC("Transform"));
 	transform_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
-	mode_buttons->add_child(transform_mode_button);
+	toolbar_left_container->add_child(transform_mode_button);
 	viewport_shortcut_buttons.push_back(transform_mode_button);
 	VSeparator *vsep = memnew(VSeparator);
-	mode_buttons->add_child(vsep);
+	toolbar_left_container->add_child(vsep);
 
 	select_mode_button = memnew(Button);
 	select_mode_button->set_theme_type_variation(SceneStringName(FlatButton));
@@ -1573,7 +1574,7 @@ GridMapEditor::GridMapEditor() {
 	select_mode_button->set_accessibility_name(TTRC("Selection"));
 	select_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
-	mode_buttons->add_child(select_mode_button);
+	toolbar_left_container->add_child(select_mode_button);
 	viewport_shortcut_buttons.push_back(select_mode_button);
 
 	erase_mode_button = memnew(Button);
@@ -1582,7 +1583,7 @@ GridMapEditor::GridMapEditor() {
 	erase_mode_button->set_button_group(mode_buttons_group);
 	erase_mode_button->set_shortcut(ED_SHORTCUT("grid_map/erase_tool", TTRC("Erase"), Key::W, true));
 	erase_mode_button->set_accessibility_name(TTRC("Erase"));
-	mode_buttons->add_child(erase_mode_button);
+	toolbar_left_container->add_child(erase_mode_button);
 	erase_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
 	viewport_shortcut_buttons.push_back(erase_mode_button);
@@ -1595,7 +1596,7 @@ GridMapEditor::GridMapEditor() {
 	paint_mode_button->set_accessibility_name(TTRC("Paint"));
 	paint_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
-	mode_buttons->add_child(paint_mode_button);
+	toolbar_left_container->add_child(paint_mode_button);
 	viewport_shortcut_buttons.push_back(paint_mode_button);
 
 	pick_mode_button = memnew(Button);
@@ -1606,14 +1607,11 @@ GridMapEditor::GridMapEditor() {
 	pick_mode_button->set_accessibility_name(TTRC("Pick"));
 	pick_mode_button->connect(SceneStringName(toggled),
 			callable_mp(this, &GridMapEditor::_on_tool_mode_changed).unbind(1));
-	mode_buttons->add_child(pick_mode_button);
+	toolbar_left_container->add_child(pick_mode_button);
 	viewport_shortcut_buttons.push_back(pick_mode_button);
 
 	vsep = memnew(VSeparator);
-	toolbar->add_child(vsep);
-
-	HBoxContainer *action_buttons = memnew(HBoxContainer);
-	toolbar->add_child(action_buttons);
+	toolbar_left_container->add_child(vsep);
 
 	fill_action_button = memnew(Button);
 	fill_action_button->set_theme_type_variation(SceneStringName(FlatButton));
@@ -1621,7 +1619,7 @@ GridMapEditor::GridMapEditor() {
 	fill_action_button->set_accessibility_name(TTRC("Fill"));
 	fill_action_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_SELECTION_FILL));
-	action_buttons->add_child(fill_action_button);
+	toolbar_left_container->add_child(fill_action_button);
 	viewport_shortcut_buttons.push_back(fill_action_button);
 
 	move_action_button = memnew(Button);
@@ -1630,7 +1628,7 @@ GridMapEditor::GridMapEditor() {
 	fill_action_button->set_accessibility_name(TTRC("Move"));
 	move_action_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_SELECTION_MOVE));
-	action_buttons->add_child(move_action_button);
+	toolbar_left_container->add_child(move_action_button);
 	viewport_shortcut_buttons.push_back(move_action_button);
 
 	duplicate_action_button = memnew(Button);
@@ -1639,7 +1637,7 @@ GridMapEditor::GridMapEditor() {
 	duplicate_action_button->set_accessibility_name(TTRC("Duplicate"));
 	duplicate_action_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_SELECTION_DUPLICATE));
-	action_buttons->add_child(duplicate_action_button);
+	toolbar_left_container->add_child(duplicate_action_button);
 	viewport_shortcut_buttons.push_back(duplicate_action_button);
 
 	delete_action_button = memnew(Button);
@@ -1648,14 +1646,11 @@ GridMapEditor::GridMapEditor() {
 	delete_action_button->set_accessibility_name(TTRC("Delete"));
 	delete_action_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_SELECTION_CLEAR));
-	action_buttons->add_child(delete_action_button);
+	toolbar_left_container->add_child(delete_action_button);
 	viewport_shortcut_buttons.push_back(delete_action_button);
 
 	vsep = memnew(VSeparator);
-	toolbar->add_child(vsep);
-
-	HBoxContainer *rotation_buttons = memnew(HBoxContainer);
-	toolbar->add_child(rotation_buttons);
+	toolbar_left_container->add_child(vsep);
 
 	rotate_x_button = memnew(Button);
 	rotate_x_button->set_theme_type_variation(SceneStringName(FlatButton));
@@ -1663,7 +1658,7 @@ GridMapEditor::GridMapEditor() {
 	rotate_x_button->set_accessibility_name(TTRC("Cursor Rotate X"));
 	rotate_x_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_CURSOR_ROTATE_X));
-	rotation_buttons->add_child(rotate_x_button);
+	toolbar_left_container->add_child(rotate_x_button);
 	viewport_shortcut_buttons.push_back(rotate_x_button);
 
 	rotate_y_button = memnew(Button);
@@ -1672,7 +1667,7 @@ GridMapEditor::GridMapEditor() {
 	rotate_y_button->set_accessibility_name(TTRC("Cursor Rotate Y"));
 	rotate_y_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_CURSOR_ROTATE_Y));
-	rotation_buttons->add_child(rotate_y_button);
+	toolbar_left_container->add_child(rotate_y_button);
 	viewport_shortcut_buttons.push_back(rotate_y_button);
 
 	rotate_z_button = memnew(Button);
@@ -1681,7 +1676,7 @@ GridMapEditor::GridMapEditor() {
 	rotate_z_button->set_accessibility_name(TTRC("Cursor Rotate Z"));
 	rotate_z_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_CURSOR_ROTATE_Z));
-	rotation_buttons->add_child(rotate_z_button);
+	toolbar_left_container->add_child(rotate_z_button);
 	viewport_shortcut_buttons.push_back(rotate_z_button);
 
 	clear_rotation_button = memnew(Button);
@@ -1690,7 +1685,7 @@ GridMapEditor::GridMapEditor() {
 	clear_rotation_button->set_accessibility_name(TTRC("Cursor Reset Rotation"));
 	clear_rotation_button->connect(SceneStringName(pressed),
 			callable_mp(this, &GridMapEditor::_menu_option).bind(MENU_OPTION_CURSOR_CLEAR_ROTATION));
-	rotation_buttons->add_child(clear_rotation_button);
+	toolbar_left_container->add_child(clear_rotation_button);
 	viewport_shortcut_buttons.push_back(clear_rotation_button);
 
 	// Wide empty separation control. (like BoxContainer::add_spacer())
@@ -1699,12 +1694,15 @@ GridMapEditor::GridMapEditor() {
 	c->set_h_size_flags(SIZE_EXPAND_FILL);
 	toolbar->add_child(c);
 
+	HBoxContainer *toolbar_right_container = memnew(HBoxContainer);
+	toolbar->add_child(toolbar_right_container);
+
 	floor = memnew(SpinBox);
 	floor->set_min(-32767);
 	floor->set_max(32767);
 	floor->set_step(1);
 	floor->set_accessibility_name(TTRC("Change Grid Floor:"));
-	toolbar->add_child(floor);
+	toolbar_right_container->add_child(floor);
 	floor->get_line_edit()->add_theme_constant_override("minimum_character_width", 2);
 	floor->get_line_edit()->set_context_menu_enabled(false);
 	floor->connect(SceneStringName(value_changed), callable_mp(this, &GridMapEditor::_floor_changed));
@@ -1716,11 +1714,11 @@ GridMapEditor::GridMapEditor() {
 	search_box->set_h_size_flags(SIZE_EXPAND_FILL);
 	search_box->set_placeholder(TTRC("Filter Meshes"));
 	search_box->set_accessibility_name(TTRC("Filter Meshes"));
-	toolbar->add_child(search_box);
+	toolbar_right_container->add_child(search_box);
 	search_box->connect(SceneStringName(text_changed), callable_mp(this, &GridMapEditor::_text_changed));
 
 	zoom_widget = memnew(EditorZoomWidget);
-	toolbar->add_child(zoom_widget);
+	toolbar_right_container->add_child(zoom_widget);
 	zoom_widget->setup_zoom_limits(0.2, 4);
 	zoom_widget->set_zoom(1.0);
 	zoom_widget->set_anchors_and_offsets_preset(Control::PRESET_TOP_LEFT, Control::PRESET_MODE_MINSIZE, 2 * EDSCALE);
@@ -1736,7 +1734,7 @@ GridMapEditor::GridMapEditor() {
 	mode_thumbnail->set_accessibility_name(TTRC("View as Thumbnails"));
 	mode_thumbnail->set_pressed(true);
 	mode_thumbnail->set_button_group(view_mode);
-	toolbar->add_child(mode_thumbnail);
+	toolbar_right_container->add_child(mode_thumbnail);
 	mode_thumbnail->connect(SceneStringName(pressed), callable_mp(this, &GridMapEditor::_set_display_mode).bind(DISPLAY_THUMBNAIL));
 
 	mode_list = memnew(Button);
@@ -1744,10 +1742,10 @@ GridMapEditor::GridMapEditor() {
 	mode_list->set_toggle_mode(true);
 	mode_list->set_accessibility_name(TTRC("View as List"));
 	mode_list->set_button_group(view_mode);
-	toolbar->add_child(mode_list);
+	toolbar_right_container->add_child(mode_list);
 	mode_list->connect(SceneStringName(pressed), callable_mp(this, &GridMapEditor::_set_display_mode).bind(DISPLAY_LIST));
 
-	toolbar->add_child(options);
+	toolbar_right_container->add_child(options);
 
 	mesh_library_palette = memnew(ItemList);
 	search_box->set_forward_control(mesh_library_palette);

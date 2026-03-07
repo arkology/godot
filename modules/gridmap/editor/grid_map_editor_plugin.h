@@ -75,7 +75,6 @@ class GridMapEditor : public EditorDock {
 	SpinBox *floor = nullptr;
 	double accumulated_floor_delta = 0.0;
 
-	HBoxContainer *toolbar = nullptr;
 	TightLocalVector<BaseButton *> viewport_shortcut_buttons;
 	Ref<ButtonGroup> mode_buttons_group;
 	// mode
