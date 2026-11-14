@@ -445,6 +445,27 @@ private:
 
 	int _get_char_pos_for_line(int p_px, int p_line, int p_wrap_index = 0) const;
 
+	// Rectangle (column) selection.
+	// Middle button: locked to rectangle until release (like VS Code).
+	// Left drag + Shift+Alt: mode switches live with the modifiers.
+	bool rect_select_dragging = false;
+	bool rect_select_middle = false;
+	bool rect_select_rectangle = false;
+	Point2i rect_select_anchor; // x = column, y = line.
+	int rect_select_anchor_x = 0; // Anchor X in text space (scroll-independent).
+	void _begin_rect_select(bool p_middle, const Point2i &p_mouse_pos, bool p_shift);
+	void _end_rect_select();
+	void _update_rect_select(bool p_shift, bool p_alt);
+	void _rebuild_rect_select();
+	bool _rect_select_autoscroll();
+	void _rect_select_held();
+
+	// Keyboard rectangle selection (Ctrl+Shift+Alt+arrows).
+	bool rect_select_keyboard = false;
+	Point2i rect_select_keyboard_pos; // Virtual cursor position (column, line) for keyboard mode.
+	void _keyboard_column_select(int p_delta_lines, int p_delta_columns);
+	int _rect_select_text_x(int p_column, int p_line) const;
+
 	/* Caret. */
 	struct Selection {
 		bool active = false;

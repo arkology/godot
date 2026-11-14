@@ -751,6 +751,32 @@ const HashMap<String, List<Ref<InputEvent>>> &InputMap::get_builtins() {
 	inputs.push_back(InputEventKey::create_reference(Key::O | KeyModifierMask::SHIFT | KeyModifierMask::CMD_OR_CTRL));
 	default_builtin_cache.insert("ui_text_caret_add_above.macos", inputs);
 
+	// Text Column (Rectangle) Selection
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(Key::LEFT | KeyModifierMask::SHIFT | KeyModifierMask::ALT | KeyModifierMask::CMD_OR_CTRL));
+	default_builtin_cache.insert("ui_text_column_select_left", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(Key::RIGHT | KeyModifierMask::SHIFT | KeyModifierMask::ALT | KeyModifierMask::CMD_OR_CTRL));
+	default_builtin_cache.insert("ui_text_column_select_right", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(Key::UP | KeyModifierMask::SHIFT | KeyModifierMask::ALT | KeyModifierMask::CMD_OR_CTRL));
+	default_builtin_cache.insert("ui_text_column_select_up", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(Key::DOWN | KeyModifierMask::SHIFT | KeyModifierMask::ALT | KeyModifierMask::CMD_OR_CTRL));
+	default_builtin_cache.insert("ui_text_column_select_down", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(Key::PAGEUP | KeyModifierMask::SHIFT | KeyModifierMask::ALT | KeyModifierMask::CMD_OR_CTRL));
+	default_builtin_cache.insert("ui_text_column_select_page_up", inputs);
+
+	inputs = List<Ref<InputEvent>>();
+	inputs.push_back(InputEventKey::create_reference(Key::PAGEDOWN | KeyModifierMask::SHIFT | KeyModifierMask::ALT | KeyModifierMask::CMD_OR_CTRL));
+	default_builtin_cache.insert("ui_text_column_select_page_down", inputs);
+
 	// Text Scrolling
 
 	inputs = List<Ref<InputEvent>>();

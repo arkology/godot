@@ -2195,6 +2195,7 @@ void TextEdit::_notification(int p_what) {
 			dragging_minimap = false;
 			dragging_selection = false;
 			can_drag_minimap = false;
+			_end_rect_select();
 			click_select_held->stop();
 		} break;
 
@@ -2476,10 +2477,11 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 	double prev_h_scroll = h_scroll->get_value();
 
 	int event_device_id = p_gui_input->get_device();
-	Ref<InputEventMouseButton> mb = p_gui_input;
 
+	Ref<InputEventMouseButton> mb = p_gui_input;
 	if (mb.is_valid() && event_device_id != InputEvent::DEVICE_ID_EMULATION) {
 		show_selection_handle = false; // Hiding selection handle because mouse is used.
+		rect_select_keyboard = false; // Cancel keyboard session on mouse input.
 
 		Vector2i mpos = mb->get_position();
 		if (is_layout_rtl()) {
@@ -2526,7 +2528,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 			if (mb->get_button_index() == MouseButton::LEFT) {
 				_reset_caret_blink_timer();
-
 				apply_ime();
 
 				Point2i pos = get_line_column_at_pos(mpos);
@@ -2557,7 +2558,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				}
 
 				// Update caret.
-
 				int caret = carets.size() - 1;
 				int prev_col = get_caret_column(caret);
 				int prev_line = get_caret_line(caret);
@@ -2569,7 +2569,8 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				bool is_triple_click = (!mb->is_double_click() && (OS::get_singleton()->get_ticks_msec() - last_dblclk) < triple_click_timeout && mb->get_position().distance_to(last_dblclk_pos) < triple_click_tolerance);
 
 				if (!mb->is_double_click() && !is_triple_click) {
-					if (mb->is_alt_pressed()) {
+					// Shift+Alt is rectangle selection, not "add caret" (like VS Code).
+					if (mb->is_alt_pressed() && !mb->is_shift_pressed()) {
 						prev_line = line;
 						prev_col = col;
 
@@ -2583,7 +2584,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 								return;
 							}
 						}
-
 						if (mouse_over_selection_caret >= 0) {
 							// Did not remove selection under mouse, don't add a new caret.
 							return;
@@ -2594,9 +2594,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 						if (caret == -1) {
 							return;
 						}
-
 						queue_accessibility_update();
-
 						last_dblclk = 0;
 					} else if (!mb->is_shift_pressed()) {
 						if (drag_and_drop_selection_enabled && mouse_over_selection_caret >= 0) {
@@ -2620,8 +2618,8 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					set_caret_column(col, false, caret);
 					play_theme_sound(theme_cache.caret_moved_sound);
 					selection_drag_attempt = false;
-					bool caret_moved = get_caret_column(caret) != prev_col || get_caret_line(caret) != prev_line;
 
+					bool caret_moved = get_caret_column(caret) != prev_col || get_caret_line(caret) != prev_line;
 					if (selecting_enabled && mb->is_shift_pressed() && !has_selection(caret) && caret_moved) {
 						// Select from the previous caret position.
 						select(prev_line, prev_col, line, col, caret);
@@ -2630,6 +2628,9 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					// Start regular select mode.
 					set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
 					_update_selection_mode_pointer(true);
+
+					// Rectangle selection: arm tracking so Shift+Alt can be pressed mid-drag.
+					_begin_rect_select(false, mpos, mb->is_shift_pressed());
 				} else if (is_triple_click) {
 					// Start triple-click select line mode.
 					set_selection_mode(SelectionMode::SELECTION_MODE_LINE);
@@ -2648,7 +2649,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					int xmargin_beg = left_margin + gutters_width + gutter_padding;
 					int wrap_i = get_line_wrap_index_at_column(pos.y, pos.x);
 					const float wrap_indent = _get_wrap_indent_offset(pos.y, wrap_i, is_layout_rtl());
-
 					Ref<TextParagraph> ldata = text.get_line_data(line);
 					for (const Variant &inline_key : ldata->get_line_objects(wrap_i)) {
 						if (!is_inline_info_valid(inline_key)) {
@@ -2658,7 +2658,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 						info["line"] = line;
 						Rect2 obj_rect = ldata->get_line_object_rect(wrap_i, inline_key);
 						obj_rect.position.x += xmargin_beg + wrap_indent - first_visible_col;
-
 						if (mpos.x > obj_rect.position.x && mpos.x < obj_rect.get_end().x) {
 							Rect2 col_rect = get_rect_at_line_column(line, col);
 							col_rect.position += get_screen_position() + Vector2(col_rect.size.x, 0);
@@ -2672,6 +2671,28 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 				queue_accessibility_update();
 				queue_redraw();
+			}
+
+			// Rectangle selection: the middle button is locked to rectangle until release (like VS Code).
+			if (mb->get_button_index() == MouseButton::MIDDLE && is_multiple_carets_enabled() && !rect_select_dragging) {
+				_reset_caret_blink_timer();
+				apply_ime();
+				_push_current_op();
+				_cancel_drag_and_drop_text();
+				selection_drag_attempt = false;
+				set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
+
+				remove_secondary_carets();
+				deselect();
+				_begin_rect_select(true, mpos, mb->is_shift_pressed());
+				set_caret_line(rect_select_anchor.y, false, true, -1, 0);
+				set_caret_column(rect_select_anchor.x, false, 0);
+				_update_rect_select(mb->is_shift_pressed(), mb->is_alt_pressed());
+
+				queue_accessibility_update();
+				queue_redraw();
+				accept_event();
+				return; // Prevents middle mouse paste below.
 			}
 
 			if (is_middle_mouse_paste_enabled() && mb->get_button_index() == MouseButton::MIDDLE && DisplayServer::get_singleton()->has_feature(DisplayServerEnums::FEATURE_CLIPBOARD_PRIMARY)) {
@@ -2717,13 +2738,24 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				return;
 			}
 
+			// Rectangle selection: finish the middle button drag.
+			if (mb->get_button_index() == MouseButton::MIDDLE && rect_select_dragging && rect_select_middle) {
+				_end_rect_select();
+				accept_event();
+				return;
+			}
+
 			if (mb->get_button_index() == MouseButton::LEFT) {
+				// Rectangle selection: finish the left button drag.
+				if (rect_select_dragging && !rect_select_middle) {
+					_end_rect_select();
+				}
+
 				if (!drag_action && selection_drag_attempt && is_mouse_over_selection()) {
 					// This is not a drag and drop attempt, update the caret.
 					selection_drag_attempt = false;
 					remove_secondary_carets();
 					deselect();
-
 					Point2i pos = get_line_column_at_pos(get_local_mouse_pos());
 					if (get_caret_line() != pos.y || get_caret_column() != pos.x) {
 						play_theme_sound(theme_cache.caret_moved_sound);
@@ -2731,11 +2763,15 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					set_caret_line(pos.y, false, true, -1, 0);
 					set_caret_column(pos.x, true, 0);
 				}
+
 				dragging_minimap = false;
 				dragging_selection = false;
 				can_drag_minimap = false;
 				set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
-				click_select_held->stop();
+				if (!rect_select_dragging) {
+					click_select_held->stop();
+				}
+
 				if (DisplayServer::get_singleton()->has_feature(DisplayServerEnums::FEATURE_CLIPBOARD_PRIMARY)) {
 					DisplayServer::get_singleton()->clipboard_set_primary(get_selected_text());
 				}
@@ -2757,27 +2793,22 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				if (!has_selection(c)) {
 					continue;
 				}
-
 				Vector<Point2i> handles_pos = _get_selection_handles_pos(c);
 				Point2i start_pos = handles_pos[0];
 				Point2i end_pos = handles_pos[1];
-
 				int line_height = get_line_height();
 
 				float start_dist = touch->get_position().distance_to(start_pos + Vector2(0, line_height + selection_handle_radius));
 				bool start_touched = start_pos.x != -1 && start_dist < selection_handle_radius * 2;
 				float end_dist = touch->get_position().distance_to(end_pos + Vector2(0, line_height + selection_handle_radius));
 				bool end_touched = end_pos.x != -1 && end_dist < selection_handle_radius * 2;
-
 				if (!start_touched && !end_touched) {
 					continue;
 				}
-
 				if (start_touched && end_touched) {
 					start_touched = start_dist < end_dist;
 					end_touched = !start_touched;
 				}
-
 				if (start_touched) {
 					selection_handle_drag_type = is_caret_after_selection_origin(c) ? SELECTION_HANDLE_START : SELECTION_HANDLE_END;
 					selection_handle_drag_offset = touch->get_position() - Vector2(start_pos) - Vector2(0, line_height / 2);
@@ -2791,7 +2822,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				return; // Return early to block default touch logic
 			}
 		}
-
 		if (touch->is_released() && selection_handle_drag_type != SELECTION_HANDLE_NONE) {
 			selection_handle_drag_type = SELECTION_HANDLE_NONE;
 			dragging_caret_index = -1;
@@ -2806,24 +2836,19 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					return;
 				}
 			}
-
 			if (touch_dragging_deaccel) {
 				_cancel_inertial_scroll();
 			}
-
 			touch_dragging_starting = true;
 			touch_dragging_in_progress = false;
-
 			drag_speed = Vector2();
 			drag_accum = Vector2();
 			last_drag_accum = Vector2();
 			drag_from = Vector2(prev_h_scroll, prev_v_scroll);
 			touch_dragging_deaccel = false;
 			time_since_motion = 0.0;
-
 			set_process_internal(true);
 		}
-
 		if ((touch->is_pressed() && touch->is_double_tap()) || (touch->is_released() && !touch->is_double_tap() && !touch_dragging_in_progress && !pan_gesture_performed)) {
 			// Otherwise, if we receive a double touch press event, or a single touch release event with no touch dragging having occurred,
 			// we process as a regular tap, similar to how mouse click are handled above omitting logic not relevant to touch taps.
@@ -2833,8 +2858,8 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			if (is_layout_rtl()) {
 				touch_pos.x = get_size().x - touch_pos.x;
 			}
-			_reset_caret_blink_timer();
 
+			_reset_caret_blink_timer();
 			apply_ime();
 
 			Point2i pos = get_line_column_at_pos(touch_pos);
@@ -2843,7 +2868,11 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 			// Gutters.
 			Vector2i current_hovered_gutter = _get_hovered_gutter(touch_pos);
-			if (current_hovered_gutter != Vector2i(-1, -1)) {
+			if (current_hovered_gutter != hovered_gutter) {
+				hovered_gutter = current_hovered_gutter;
+				queue_redraw();
+			}
+			if (hovered_gutter != Vector2i(-1, -1)) {
 				emit_signal(SNAME("gutter_clicked"), current_hovered_gutter.y, current_hovered_gutter.x);
 				return;
 			}
@@ -2874,12 +2903,10 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				int caret = 0;
 				remove_secondary_carets();
 				deselect();
-
 				_push_current_op();
 				set_caret_line(line, false, true, -1, caret);
 				set_caret_column(col, false, caret);
 				play_theme_sound(theme_cache.caret_moved_sound);
-
 				adjust_viewport_to_caret();
 			} else {
 				// Start double-click select word mode.
@@ -2892,7 +2919,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				int xmargin_beg = left_margin + gutters_width + gutter_padding;
 				int wrap_i = get_line_wrap_index_at_column(pos.y, pos.x);
 				const float wrap_indent = _get_wrap_indent_offset(pos.y, wrap_i, is_layout_rtl());
-
 				Ref<TextParagraph> ldata = text.get_line_data(line);
 				for (const Variant &inline_key : ldata->get_line_objects(wrap_i)) {
 					if (!is_inline_info_valid(inline_key)) {
@@ -2902,7 +2928,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					info["line"] = line;
 					Rect2 obj_rect = ldata->get_line_object_rect(wrap_i, inline_key);
 					obj_rect.position.x += xmargin_beg + wrap_indent - first_visible_col;
-
 					if (touch_pos.x > obj_rect.position.x && touch_pos.x < obj_rect.get_end().x) {
 						Rect2 col_rect = get_rect_at_line_column(line, col);
 						col_rect.position += get_screen_position() + Vector2(col_rect.size.x, 0);
@@ -2917,7 +2942,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			queue_accessibility_update();
 			queue_redraw();
 		}
-
 		if (touch->is_released()) {
 			if (!touch_dragging_in_progress) {
 				// If touch dragging did not occur, we perform some tidy up similar to what's done for the mouse click logic.
@@ -2927,6 +2951,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					dragging_selection = false;
 					set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
 					click_select_held->stop();
+
 					if (DisplayServer::get_singleton()->has_feature(DisplayServerEnums::FEATURE_CLIPBOARD_PRIMARY)) {
 						DisplayServer::get_singleton()->clipboard_set_primary(get_selected_text());
 					}
@@ -2935,12 +2960,12 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					if (editable && !dragging_minimap && !pan_gesture_performed) {
 						_show_virtual_keyboard();
 					}
+
 					dragging_minimap = false;
 					can_drag_minimap = false;
 					pan_gesture_performed = false;
 				}
 			}
-
 			if (touch_dragging_starting || touch_dragging_in_progress) {
 				if (touch->is_canceled() || drag_speed == Vector2()) {
 					_cancel_inertial_scroll();
@@ -2948,7 +2973,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					touch_dragging_deaccel = true;
 				}
 			}
-
 			touch_dragging_starting = false;
 			touch_dragging_in_progress = false;
 		}
@@ -2962,13 +2986,11 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			Vector2 corrected_text_pos = drag->get_position() - selection_handle_drag_offset;
 			Point2i pos = get_line_column_at_pos(corrected_text_pos);
 			int c = dragging_caret_index;
-
 			if (selection_handle_drag_type == SELECTION_HANDLE_END) {
 				select(get_selection_origin_line(c), get_selection_origin_column(c), pos.y, pos.x, c);
 			} else {
 				select(pos.y, pos.x, get_caret_line(c), get_caret_column(c), c);
 			}
-
 			accept_event();
 			return;
 		}
@@ -2977,17 +2999,13 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		if (touch_dragging_starting && !touch_dragging_deaccel) {
 			touch_dragging_in_progress = true;
 			Vector2 motion = drag->get_relative();
-
 			drag_accum -= motion;
-
 			// Convert the vertical accumulation from raw pixels to lines
 			float line_height = MAX(1, get_line_height());
 			float vertical_line_offset = drag_accum.y / line_height;
-
 			Vector2 diff = drag_from + Vector2(drag_accum.x, vertical_line_offset);
 			h_scroll->scroll_to(diff.x);
 			v_scroll->scroll_to(diff.y);
-
 			time_since_motion = 0.0;
 			accept_event();
 			_selection_mode_update();
@@ -3006,6 +3024,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		// to detect that the interaction was part of a pan gesture and avoid showing the virtual keyboard.
 		touch_dragging_in_progress = true;
 		pan_gesture_performed = true;
+
 		const real_t line_height = text.get_line_height();
 		const real_t delta = pan_gesture->get_delta().y / line_height;
 		if (delta < 0) {
@@ -3019,31 +3038,37 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		}
 		_selection_mode_update();
 		queue_accessibility_update();
-
 		return;
 	}
 
 	Ref<InputEventMouseMotion> mm = p_gui_input;
-
 	if (mm.is_valid() && event_device_id != InputEvent::DEVICE_ID_EMULATION) {
+		// Rectangle selection: re-evaluate the mode from the event's own modifiers.
+		if (rect_select_dragging) {
+			_update_rect_select(mm->is_shift_pressed(), mm->is_alt_pressed());
+			if (rect_select_rectangle) {
+				accept_event();
+				return;
+			}
+		}
+
 		_on_drag_or_mouse_motion_event(mm->get_position(), mm->get_button_mask().has_flag(MouseButtonMask::LEFT));
 	}
 
 	if (draw_minimap && !dragging_selection) {
 		_update_minimap_hover();
 	}
-
 	if (v_scroll->get_value() != prev_v_scroll || h_scroll->get_value() != prev_h_scroll) {
 		accept_event(); // Accept event if scroll changed.
 	}
 
 	Ref<InputEventKey> k = p_gui_input;
-
 	if (k.is_valid()) {
 		if (alt_input(p_gui_input)) {
 			accept_event();
 			return;
 		}
+
 		if (!k->is_pressed()) {
 			return;
 		}
@@ -3056,7 +3081,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		last_key_is_echo = k->is_echo();
 
 		_cancel_drag_and_drop_text();
-
 		_reset_caret_blink_timer();
 
 		// Allow unicode handling if:
@@ -3200,6 +3224,37 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				accept_event();
 				return;
 			}
+
+			if (k->is_action("ui_text_column_select_left", true)) {
+				_keyboard_column_select(0, -1);
+				accept_event();
+				return;
+			}
+			if (k->is_action("ui_text_column_select_right", true)) {
+				_keyboard_column_select(0, 1);
+				accept_event();
+				return;
+			}
+			if (k->is_action("ui_text_column_select_up", true)) {
+				_keyboard_column_select(-1, 0);
+				accept_event();
+				return;
+			}
+			if (k->is_action("ui_text_column_select_down", true)) {
+				_keyboard_column_select(1, 0);
+				accept_event();
+				return;
+			}
+			if (k->is_action("ui_text_column_select_page_up", true)) {
+				_keyboard_column_select(-MAX(1, get_visible_line_count()), 0);
+				accept_event();
+				return;
+			}
+			if (k->is_action("ui_text_column_select_page_down", true)) {
+				_keyboard_column_select(MAX(1, get_visible_line_count()), 0);
+				accept_event();
+				return;
+			}
 		}
 
 		// MISC.
@@ -3228,7 +3283,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		}
 
 		// CARET MOVEMENT
-
 		k = k->duplicate();
 		bool shift_pressed = k->is_shift_pressed();
 		// Remove shift or else actions will not match. Use above variable for selection.
@@ -8998,6 +9052,14 @@ int TextEdit::_get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) con
 	return ofs;
 }
 
+int TextEdit::_rect_select_text_x(int p_column, int p_line) const {
+	const int shaped_x = _get_column_x_offset_for_line(p_column, p_line, p_column);
+	if (!is_layout_rtl()) {
+		return shaped_x;
+	}
+	return TS->shaped_text_get_size(text.get_line_data(p_line)->get_line_rid(0)).x - shaped_x;
+}
+
 /* Caret */
 void TextEdit::_set_caret_pos_dirty(bool p_dirty) {
 	caret_pos_dirty = p_dirty;
@@ -9200,6 +9262,10 @@ void TextEdit::_selection_changed(int p_caret) {
 }
 
 void TextEdit::_click_selection_held() {
+	if (rect_select_dragging) {
+		_rect_select_held();
+		return;
+	}
 	// Update the selection mode on a timer so it is updated when the view scrolls even if the mouse isn't moving.
 	if (!Input::get_singleton()->is_mouse_button_pressed(MouseButton::LEFT)) {
 		click_select_held->stop();
@@ -9222,10 +9288,320 @@ void TextEdit::_click_selection_held() {
 	}
 }
 
+void TextEdit::_begin_rect_select(bool p_middle, const Point2i &p_mouse_pos, bool p_shift) {
+	rect_select_dragging = true;
+	rect_select_middle = p_middle;
+	rect_select_rectangle = false;
+	rect_select_keyboard = false;
+	if (p_middle && !p_shift) {
+		rect_select_anchor = get_line_column_at_pos(p_mouse_pos);
+		rect_select_anchor_x = p_mouse_pos.x - (get_line_start_margin() + gutters_width + gutter_padding) + first_visible_col;
+	} else {
+		rect_select_anchor = Point2i(get_selection_origin_column(0), get_selection_origin_line(0));
+		rect_select_anchor_x = _rect_select_text_x(rect_select_anchor.x, rect_select_anchor.y);
+	}
+	click_select_held->start();
+}
+
+void TextEdit::_end_rect_select() {
+	rect_select_dragging = false;
+	rect_select_middle = false;
+	rect_select_rectangle = false;
+	rect_select_keyboard = false;
+	// Like a regular drag: ending it always clears the selection mode, so no later
+	// scroll/motion/timer callback can continue the selection.
+	set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
+	click_select_held->stop();
+	merge_overlapping_carets();
+	queue_accessibility_update();
+	queue_redraw();
+}
+
+void TextEdit::_update_rect_select(bool p_shift, bool p_alt) {
+	if (!rect_select_dragging) {
+		return;
+	}
+	// `selecting_mode` is the shared kill switch: if anything reset it (focus loss,
+	// drag & drop, right click, IME, select_all, ...), the rectangle drag must end too.
+	if (get_selection_mode() == SelectionMode::SELECTION_MODE_NONE) {
+		_end_rect_select();
+		return;
+	}
+
+	const bool want_rectangle = is_multiple_carets_enabled() && (rect_select_middle || (p_shift && p_alt));
+
+	if (want_rectangle == rect_select_rectangle) {
+		if (want_rectangle) {
+			_rebuild_rect_select(); // The mouse may have moved.
+		}
+		return;
+	}
+
+	rect_select_rectangle = want_rectangle;
+	if (want_rectangle) {
+		// Entering rectangle mode; the anchor is kept from the drag start.
+		_rebuild_rect_select();
+	} else {
+		if (!p_alt) {
+			// Alt released: a single normal selection from the anchor.
+			remove_secondary_carets();
+		}
+		// Alt still held (Shift released): the other carets stay frozen and only
+		// the last caret keeps selecting, which is what pointer mode does.
+		_selection_mode_update();
+	}
+	queue_accessibility_update();
+	queue_redraw();
+}
+
+void TextEdit::_rebuild_rect_select() {
+	int mouse_x;
+	int current_line;
+	if (rect_select_keyboard) {
+		mouse_x = rect_select_target_x;
+		current_line = rect_select_target_line;
+	} else {
+		const Point2i mpos = get_local_mouse_pos();
+		mouse_x = mpos.x - (get_line_start_margin() + gutters_width + gutter_padding) + first_visible_col;
+		current_line = get_line_column_at_pos(mpos).y;
+	}
+	const int anchor_line = rect_select_anchor.y;
+	const int step = (current_line >= anchor_line) ? 1 : -1;
+	const int line_count = Math::abs(current_line - anchor_line) + 1;
+	const int left_x = MIN(rect_select_anchor_x, mouse_x);
+
+	// A zero-width rectangle (pure vertical drag) must place a caret on every line, like VS Code.
+	// The tolerance is the pixel analogue of VS Code's column quantization.
+	const real_t char_w = MAX((real_t)1.0, (real_t)theme_cache.font->get_char_size(' ', theme_cache.font_size).width);
+	const bool has_width = (real_t)Math::abs(mouse_x - rect_select_anchor_x) >= char_w * (real_t)0.5;
+
+	remove_secondary_carets();
+
+	// Caret 0 goes to the first selected line (VS Code's primary); the last caret ends up under the mouse.
+	int selected_count = 0;
+	for (int i = 0; i < line_count; i++) {
+		const int line = anchor_line + i * step;
+		if (_is_line_hidden(line)) {
+			continue;
+		}
+		if (has_width) {
+			const int line_len = text[line].length();
+			if (_rect_select_text_x(line_len, line) < left_x) {
+				continue;
+			}
+		}
+		const int target_col = _get_char_pos_for_line(mouse_x, line);
+		const int origin_col = _get_char_pos_for_line(rect_select_anchor_x, line);
+		int caret = 0;
+		if (selected_count != 0) {
+			caret = add_caret(line, target_col);
+			if (caret == -1) {
+				continue;
+			}
+		}
+		select(line, origin_col, line, target_col, caret);
+		// Pointer mode does not update these, but the frozen/normal sub-modes need them.
+		carets[caret].selection.word_begin_column = origin_col;
+		carets[caret].selection.word_end_column = origin_col;
+		selected_count++;
+	}
+
+	if (selected_count == 0) {
+		// The rectangle is past the end of every line: add a caret at the end of each line.
+		for (int i = 0; i < line_count; i++) {
+			const int line = anchor_line + i * step;
+			if (_is_line_hidden(line)) {
+				continue;
+			}
+			const int line_len = text[line].length();
+			int caret = 0;
+			if (selected_count != 0) {
+				caret = add_caret(line, line_len);
+				if (caret == -1) {
+					continue;
+				}
+			}
+			select(line, line_len, line, line_len, caret);
+			carets[caret].selection.word_begin_column = line_len;
+			carets[caret].selection.word_end_column = line_len;
+			selected_count++;
+		}
+	}
+
+	queue_accessibility_update();
+	queue_redraw();
+}
+
+bool TextEdit::_rect_select_autoscroll() {
+	const Ref<StyleBox> style = _get_current_stylebox();
+	const Point2 mp = get_local_mouse_pos();
+	const Point2 raw_mp = get_local_mouse_position();
+	const real_t line_height = get_line_height();
+	const real_t top = style->get_margin(SIDE_TOP);
+	const real_t bottom = top + _get_control_height();
+
+	const double prev_v = v_scroll->get_value();
+	const int prev_h = h_scroll->get_value();
+
+	// Vertical: speed grows with the distance outside the viewport.
+	if (mp.y < top) {
+		set_v_scroll(prev_v - CLAMP((top - mp.y) / line_height, (real_t)0.0, (real_t)12.0));
+	} else if (mp.y > bottom) {
+		set_v_scroll(prev_v + CLAMP((mp.y - bottom) / line_height, (real_t)0.0, (real_t)12.0));
+	}
+
+	// Horizontal: raw coordinates, direction matches WHEEL_LEFT/RIGHT (incl. RTL).
+	const real_t char_w = MAX((real_t)1.0, (real_t)theme_cache.font->get_char_size(' ', theme_cache.font_size).width);
+	if (raw_mp.x < 0) {
+		h_scroll->set_value(prev_h - CLAMP(-raw_mp.x * (real_t)0.5, (real_t)1.0, char_w * 10));
+	} else if (raw_mp.x > get_size().width) {
+		h_scroll->set_value(prev_h + CLAMP((raw_mp.x - get_size().width) * (real_t)0.5, (real_t)1.0, char_w * 10));
+	}
+
+	return v_scroll->get_value() != prev_v || h_scroll->get_value() != prev_h;
+}
+
+void TextEdit::_rect_select_held() {
+	const MouseButton button = rect_select_middle ? MouseButton::MIDDLE : MouseButton::LEFT;
+	if (!Input::get_singleton()->is_mouse_button_pressed(button)) {
+		_end_rect_select(); // Release event was missed (e.g. released outside the window).
+		return;
+	}
+	if (get_selection_mode() == SelectionMode::SELECTION_MODE_NONE) {
+		_end_rect_select(); // Cancelled externally, same as a regular selection drag.
+		return;
+	}
+
+	// Polling is required here: a stationary mouse produces no motion events.
+	_update_rect_select(Input::get_singleton()->is_key_pressed(Key::SHIFT), Input::get_singleton()->is_key_pressed(Key::ALT));
+	if (!rect_select_dragging) {
+		return; // _update_rect_select() ended the drag; do not re-arm the timer.
+	}
+
+	if (rect_select_rectangle) {
+		if (_rect_select_autoscroll()) {
+			_rebuild_rect_select();
+		}
+	} else {
+		_selection_mode_update();
+	}
+	click_select_held->start();
+}
+
+void TextEdit::_keyboard_column_select(int p_delta_lines, int p_delta_columns) {
+	if (!selecting_enabled || !is_multiple_carets_enabled()) {
+		return;
+	}
+	if (text.size() == 1 && text[0].is_empty()) {
+		return;
+	}
+	if (p_delta_lines == 0 && p_delta_columns == 0) {
+		return;
+	}
+
+	// Start or continue keyboard rectangle session.
+	if (!rect_select_keyboard) {
+		_push_current_op();
+		if (rect_select_dragging) {
+			_end_rect_select();
+		}
+		rect_select_keyboard = true;
+		rect_select_anchor = Point2i(get_caret_column(0), get_caret_line(0));
+		rect_select_anchor_x = _rect_select_text_x(rect_select_anchor.x, rect_select_anchor.y);
+		rect_select_keyboard_pos = rect_select_anchor;
+	}
+
+	// Move virtual cursor.
+	if (p_delta_lines != 0) {
+		const Point2i ofs = get_next_visible_line_index_offset_from(rect_select_keyboard_pos.y, 0, p_delta_lines);
+		const int new_line = p_delta_lines > 0 ? rect_select_keyboard_pos.y + ofs.x - 1 : rect_select_keyboard_pos.y - ofs.x + 1;
+		rect_select_keyboard_pos.y = CLAMP(new_line, 0, text.size() - 1);
+	}
+	if (p_delta_columns != 0) {
+		const int line_len = text[rect_select_keyboard_pos.y].length();
+		if (p_delta_columns > 0) {
+			rect_select_keyboard_pos.x = MIN(line_len, rect_select_keyboard_pos.x + 1);
+		} else {
+			rect_select_keyboard_pos.x = MAX(0, rect_select_keyboard_pos.x - 1);
+		}
+	}
+
+	// Rebuild rectangle using the same logic as mouse.
+	// Temporarily override mouse position with keyboard position.
+	const Point2i saved_mouse_pos = get_local_mouse_pos();
+	const int mouse_x = _rect_select_text_x(rect_select_keyboard_pos.x, rect_select_keyboard_pos.y);
+	const int current_line = rect_select_keyboard_pos.y;
+	const int anchor_line = rect_select_anchor.y;
+	const int step = (current_line >= anchor_line) ? 1 : -1;
+	const int line_count = Math::abs(current_line - anchor_line) + 1;
+	const int left_x = MIN(rect_select_anchor_x, mouse_x);
+
+	const real_t char_w = MAX((real_t)1.0, (real_t)theme_cache.font->get_char_size(' ', theme_cache.font_size).width);
+	const bool has_width = (real_t)Math::abs(mouse_x - rect_select_anchor_x) >= char_w * (real_t)0.5;
+
+	remove_secondary_carets();
+
+	int selected_count = 0;
+	for (int i = 0; i < line_count; i++) {
+		const int line = anchor_line + i * step;
+		if (_is_line_hidden(line)) {
+			continue;
+		}
+		if (has_width) {
+			const int line_len = text[line].length();
+			if (_rect_select_text_x(line_len, line) < left_x) {
+				continue;
+			}
+		}
+		const int target_col = _get_char_pos_for_line(mouse_x, line);
+		const int origin_col = _get_char_pos_for_line(rect_select_anchor_x, line);
+		int caret = 0;
+		if (selected_count != 0) {
+			caret = add_caret(line, target_col);
+			if (caret == -1) {
+				continue;
+			}
+		}
+		select(line, origin_col, line, target_col, caret);
+		carets[caret].selection.word_begin_column = origin_col;
+		carets[caret].selection.word_end_column = origin_col;
+		selected_count++;
+	}
+
+	if (selected_count == 0) {
+		for (int i = 0; i < line_count; i++) {
+			const int line = anchor_line + i * step;
+			if (_is_line_hidden(line)) {
+				continue;
+			}
+			const int line_len = text[line].length();
+			int caret = 0;
+			if (selected_count != 0) {
+				caret = add_caret(line, line_len);
+				if (caret == -1) {
+					continue;
+				}
+			}
+			select(line, line_len, line, line_len, caret);
+			carets[caret].selection.word_begin_column = line_len;
+			carets[caret].selection.word_end_column = line_len;
+			selected_count++;
+		}
+	}
+
+	queue_accessibility_update();
+	queue_redraw();
+	adjust_viewport_to_caret(get_caret_count() - 1);
+}
+
 void TextEdit::_selection_mode_update() {
 	switch (get_selection_mode()) {
 		case SelectionMode::SELECTION_MODE_POINTER: {
-			_update_selection_mode_pointer();
+			if (rect_select_dragging && rect_select_rectangle) {
+				_rebuild_rect_select();
+			} else {
+				_update_selection_mode_pointer();
+			}
 		} break;
 		case SelectionMode::SELECTION_MODE_WORD: {
 			_update_selection_mode_word();
